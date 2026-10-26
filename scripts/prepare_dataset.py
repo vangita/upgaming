@@ -24,11 +24,7 @@ def extract_paragraphs(dataset) -> list[dict]:
     for example in dataset:
         context = example["context"]
         for title, sentences in zip(context["title"], context["sentences"]):
-            paragraphs.append({
-                "title": title,
-                "sentences": sentences,
-                "source_question_id": example["id"],
-            })
+            paragraphs.append({"title": title, "sentences": sentences})
     return paragraphs
 
 

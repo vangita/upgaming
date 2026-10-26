@@ -10,13 +10,16 @@ from app.ingestion.models import Document
 logger = logging.getLogger(__name__)
 
 
-def _record_to_document(record: dict, path: Path, line_number: int) -> Document:
+def _record_to_document(record: object, path: Path, line_number: int) -> Document:
+    if not isinstance(record, dict):
+        raise ValueError("line is not a JSON object")
+
     title = record.pop("title", None)
 
     if "text" in record:
         text = record.pop("text")
     elif "sentences" in record:
-        text = "".join(record["sentences"])
+        text = "".join(record.pop("sentences"))
     else:
         raise ValueError("record has neither 'text' nor 'sentences'")
 
@@ -39,7 +42,7 @@ def parse_jsonl(path: Path) -> Iterator[Document]:
             try:
                 record = json.loads(line)
                 yield _record_to_document(record, path, line_number)
-            except (json.JSONDecodeError, ValueError, ValidationError) as e:
+            except (json.JSONDecodeError, ValueError, TypeError, ValidationError) as e:
                 skipped += 1
                 logger.warning("%s:%d skipped: %s", path.name, line_number, e)
 
