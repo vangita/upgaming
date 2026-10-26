@@ -1,6 +1,7 @@
 import logging
 from collections.abc import Iterator
 from pathlib import Path
+from zipfile import BadZipFile
 
 import docx
 from docx.opc.exceptions import PackageNotFoundError
@@ -9,6 +10,7 @@ from docx.text.paragraph import Paragraph
 from pydantic import ValidationError
 
 from app.ingestion.models import Document
+from app.ingestion.parsers.common import first_heading
 
 logger = logging.getLogger(__name__)
 
@@ -53,18 +55,13 @@ def _file_metadata(document) -> dict:
 
 
 def _find_title(document, text: str, path: Path) -> str:
-    if document.core_properties.title:
-        return document.core_properties.title
-    for line in text.splitlines():
-        if line.startswith("# "):
-            return line.removeprefix("# ")
-    return path.stem
+    return document.core_properties.title or first_heading(text) or path.stem
 
 
 def parse_docx(path: Path) -> Iterator[Document]:
     try:
         document = docx.Document(str(path))
-    except PackageNotFoundError:
+    except (PackageNotFoundError, BadZipFile, KeyError):
         logger.warning("%s skipped: not a valid DOCX file", path.name)
         return
 

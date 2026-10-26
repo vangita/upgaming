@@ -1,5 +1,4 @@
 import logging
-import re
 from collections.abc import Iterator
 from datetime import datetime, timezone
 from pathlib import Path
@@ -7,10 +6,9 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from app.ingestion.models import Document
+from app.ingestion.parsers.common import first_heading
 
 logger = logging.getLogger(__name__)
-
-MD_HEADING = re.compile(r"^#\s+(.+)$", re.MULTILINE)
 
 
 def _read_text(path: Path) -> str:
@@ -25,9 +23,7 @@ def _read_text(path: Path) -> str:
 
 def _find_title(text: str, path: Path) -> str:
     if path.suffix.lower() == ".md":
-        match = MD_HEADING.search(text)
-        if match:
-            return match.group(1)
+        return first_heading(text) or path.stem
     return path.stem
 
 
