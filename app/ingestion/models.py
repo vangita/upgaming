@@ -13,3 +13,27 @@ class Document(BaseModel):
     source: str
     file_format: FileFormat
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class Chunk(BaseModel):
+    text: str = Field(min_length=1)
+    title: str
+    source: str
+    file_format: FileFormat
+    chunk_index: int
+    char_start: int
+    char_end: int
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @classmethod
+    def from_document(cls, document: Document, index: int, char_start: int, char_end: int) -> "Chunk":
+        return cls(
+            text=document.text[char_start:char_end],
+            title=document.title,
+            source=document.source,
+            file_format=document.file_format,
+            chunk_index=index,
+            char_start=char_start,
+            char_end=char_end,
+            metadata=document.metadata,
+        )
