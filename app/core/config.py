@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     def empty_to_none(cls, value: str | None) -> str | None:
         return value or None
 
+    @property
+    def main_collection(self) -> str:
+        # The collection the app answers from and uploads go to: the structured chunking one
+        return f"{self.qdrant_collection}_structured"
+
 
 @lru_cache
 def get_settings() -> Settings:

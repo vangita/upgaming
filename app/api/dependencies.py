@@ -1,0 +1,30 @@
+from functools import lru_cache
+
+from app.core.config import get_settings
+from app.rag.agent import InvestigationAgent
+from app.rag.pipeline import RAGPipeline
+from app.retrieval.retriever import Retriever
+from app.storage.qdrant_store import QdrantStore
+
+# One instance of each per process: they hold the embedding model and the HTTP clients.
+# Routes get them through Depends(...), so tests can replace them with app.dependency_overrides
+
+
+@lru_cache
+def get_store() -> QdrantStore:
+    return QdrantStore(get_settings().main_collection)
+
+
+@lru_cache
+def get_retriever() -> Retriever:
+    return Retriever(get_store())
+
+
+@lru_cache
+def get_agent() -> InvestigationAgent:
+    return InvestigationAgent(get_retriever())
+
+
+@lru_cache
+def get_pipeline() -> RAGPipeline:
+    return RAGPipeline(get_retriever())

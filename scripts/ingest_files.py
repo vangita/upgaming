@@ -29,8 +29,7 @@ def main() -> None:
     args = parser.parse_args()
 
     setup_logging()
-    # The main collection uses structured chunking, the same as IngestionService
-    store = QdrantStore(f"{get_settings().qdrant_collection}_structured")
+    store = QdrantStore(get_settings().main_collection)
     service = IngestionService(store)
     store.ensure_collection(service.embedder.dimension)
 
