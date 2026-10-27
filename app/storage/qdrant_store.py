@@ -134,5 +134,11 @@ class QdrantStore:
         logger.info("Deleted %d chunks of %s from %s", deleted, source, self.collection)
         return deleted
 
+    def list_sources(self, limit: int = 1000) -> dict[str, int]:
+        # Chunks per file, counted from the keyword index on `source`. The index keeps
+        # deleted files with a count of 0 for a while, so those are left out
+        response = self.client.facet(self.collection, key="source", limit=limit, exact=True)
+        return {hit.value: hit.count for hit in response.hits if hit.count}
+
     def count(self) -> int:
         return self.client.count(self.collection).count

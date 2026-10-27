@@ -1,6 +1,7 @@
 from functools import lru_cache
 
 from app.core.config import get_settings
+from app.ingestion.service import IngestionService
 from app.rag.agent import InvestigationAgent
 from app.rag.pipeline import RAGPipeline
 from app.retrieval.retriever import Retriever
@@ -28,3 +29,9 @@ def get_agent() -> InvestigationAgent:
 @lru_cache
 def get_pipeline() -> RAGPipeline:
     return RAGPipeline(get_retriever())
+
+
+@lru_cache
+def get_ingestion() -> IngestionService:
+    # Shares the retriever's embedder, so the model is loaded only once
+    return IngestionService(get_store(), get_retriever().embedder)

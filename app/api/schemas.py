@@ -67,6 +67,18 @@ class AskResponse(BaseModel):
         )
 
 
+class DocumentInfo(BaseModel):
+    source: str
+    chunks: int
+    # The base dataset cannot be replaced or deleted through the API
+    protected: bool
+
+
+class DeleteResponse(BaseModel):
+    source: str
+    deleted_chunks: int
+
+
 class HealthResponse(BaseModel):
     status: Literal["ok"]
     collection: str
