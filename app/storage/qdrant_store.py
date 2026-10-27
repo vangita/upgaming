@@ -8,10 +8,12 @@ from qdrant_client import QdrantClient, models
 
 from app.core.config import get_settings
 from app.ingestion.models import Chunk
+from app.retrieval.bm25 import encode_document, encode_query
 
 logger = logging.getLogger(__name__)
 
 DENSE = "dense"
+SPARSE = "bm25"
 INDEXED_FIELDS = ("source", "metadata.content_hash")
 
 
@@ -30,6 +32,10 @@ def chunk_id(chunk: Chunk) -> str:
 
 def _match(field: str, value: str) -> models.Filter:
     return models.Filter(must=[models.FieldCondition(key=field, match=models.MatchValue(value=value))])
+
+
+def _sparse(weights: dict[int, float]) -> models.SparseVector:
+    return models.SparseVector(indices=list(weights), values=list(weights.values()))
 
 
 @lru_cache
@@ -55,6 +61,9 @@ class QdrantStore:
         self.client.create_collection(
             self.collection,
             vectors_config={DENSE: models.VectorParams(size=dimension, distance=models.Distance.COSINE)},
+            # Qdrant computes IDF over the whole collection; together with our
+            # document weights the sparse dot product becomes the BM25 score
+            sparse_vectors_config={SPARSE: models.SparseVectorParams(modifier=models.Modifier.IDF)},
         )
         for field in INDEXED_FIELDS:
             self.client.create_payload_index(self.collection, field, models.PayloadSchemaType.KEYWORD)
@@ -63,17 +72,33 @@ class QdrantStore:
     def upsert(self, chunks: list[Chunk], vectors: np.ndarray, batch_size: int = 256) -> None:
         if len(chunks) != len(vectors):
             raise ValueError(f"{len(chunks)} chunks but {len(vectors)} vectors")
+        # BM25 vectors are built from the text here, so the keyword index can never drift from it
         points = (
-            models.PointStruct(id=chunk_id(chunk), vector={DENSE: vector.tolist()}, payload=chunk.model_dump())
+            models.PointStruct(
+                id=chunk_id(chunk),
+                vector={DENSE: vector.tolist(), SPARSE: _sparse(encode_document(chunk.text))},
+                payload=chunk.model_dump(),
+            )
             for chunk, vector in zip(chunks, vectors)
         )
         self.client.upload_points(self.collection, points, batch_size=batch_size, wait=True)
 
-    def search(self, query_vector: np.ndarray, limit: int = 10, source: str | None = None) -> list[SearchHit]:
+    def semantic_search(
+        self, query_vector: np.ndarray, limit: int = 10, source: str | None = None
+    ) -> list[SearchHit]:
+        return self._query(query_vector, DENSE, limit, source)
+
+    def keyword_search(self, query: str, limit: int = 10, source: str | None = None) -> list[SearchHit]:
+        weights = encode_query(query)
+        if not weights:
+            return []
+        return self._query(_sparse(weights), SPARSE, limit, source)
+
+    def _query(self, query, using: str, limit: int, source: str | None) -> list[SearchHit]:
         response = self.client.query_points(
             self.collection,
-            query=query_vector,
-            using=DENSE,
+            query=query,
+            using=using,
             limit=limit,
             query_filter=_match("source", source) if source else None,
             with_payload=True,
