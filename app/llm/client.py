@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
 
@@ -25,11 +26,21 @@ def _error_code(error: groq.APIStatusError) -> str | None:
     return body.get("error", {}).get("code")
 
 
+@dataclass
+class Usage:
+    """Calls and tokens since the client was created; the evaluation reads the difference per question."""
+
+    calls: int = 0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+
+
 class LLMClient:
     def __init__(self, api_key: str, model: str, timeout: float = 30.0, max_retries: int = 3) -> None:
         # The SDK itself retries connection errors, 408, 409, 429 and 5xx with exponential backoff
         self.client = groq.Groq(api_key=api_key, timeout=timeout, max_retries=max_retries)
         self.model = model
+        self.usage = Usage()
 
     def chat(self, messages: list[Message], temperature: float = 0.0, max_tokens: int = 1024) -> str:
         message = self.complete(messages, temperature=temperature, max_tokens=max_tokens)
@@ -70,6 +81,9 @@ class LLMClient:
 
         choice = response.choices[0]
         usage = response.usage
+        self.usage.calls += 1
+        self.usage.prompt_tokens += usage.prompt_tokens
+        self.usage.completion_tokens += usage.completion_tokens
         logger.info(
             "LLM call: %d prompt + %d completion tokens", usage.prompt_tokens, usage.completion_tokens
         )
