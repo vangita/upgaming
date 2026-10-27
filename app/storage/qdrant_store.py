@@ -30,6 +30,12 @@ def chunk_id(chunk: Chunk) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_URL, key))
 
 
+def keyword_text(chunk: Chunk) -> str:
+    # The title is indexed with the text: a chunk often does not repeat what its document
+    # is about (e.g. "INC-2041" appears only in the title of the status page)
+    return f"{chunk.title}\n{chunk.text}"
+
+
 def _condition(field: str, value: str) -> models.FieldCondition:
     return models.FieldCondition(key=field, match=models.MatchValue(value=value))
 
@@ -80,7 +86,7 @@ class QdrantStore:
         points = (
             models.PointStruct(
                 id=chunk_id(chunk),
-                vector={DENSE: vector.tolist(), SPARSE: _sparse(encode_document(chunk.text))},
+                vector={DENSE: vector.tolist(), SPARSE: _sparse(encode_document(keyword_text(chunk)))},
                 payload=chunk.model_dump(),
             )
             for chunk, vector in zip(chunks, vectors)

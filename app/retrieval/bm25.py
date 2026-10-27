@@ -14,8 +14,8 @@ STOPWORDS = frozenset(
 # B controls how strongly long chunks are penalised
 K1 = 1.2
 B = 0.75
-# Mean chunk length in tokens (after stopword removal) in the HotpotQA corpus
-AVG_DOC_LENGTH = 55.0
+# Mean chunk length in tokens (title + text, after stopword removal) in the HotpotQA corpus
+AVG_DOC_LENGTH = 57.5
 
 
 def tokenize(text: str) -> list[str]:

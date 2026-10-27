@@ -1,4 +1,4 @@
-from app.rag.citations import extract_citations, normalize_answer
+from app.rag.citations import extract_citations, normalize_answer, strip_citations
 
 
 def test_single_citation():
@@ -27,6 +27,10 @@ def test_numbers_outside_brackets_are_not_citations():
 
 def test_no_citations():
     assert extract_citations("I don't have enough information to answer this question.") == []
+
+
+def test_strip_citations_with_the_space_before_them():
+    assert strip_citations("Not in the sources [1][6], sorry [2].") == "Not in the sources, sorry."
 
 
 def test_normalize_answer():

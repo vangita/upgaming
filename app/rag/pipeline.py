@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from pydantic import BaseModel
 
 from app.llm.client import LLMClient, get_llm
-from app.rag.citations import extract_citations, normalize_answer
+from app.rag.citations import extract_citations, normalize_answer, strip_citations
 from app.rag.prompts import NO_ANSWER, build_messages
 from app.retrieval.retriever import Retriever, SearchMode
 from app.storage.qdrant_store import SearchHit
@@ -49,8 +49,7 @@ class RAGAnswer(BaseModel):
         searches: Sequence[str] = (),
         listed_sources: Sequence[int] = (),
     ) -> "RAGAnswer":
-        # listed_sources: numbers the LLM returned separately; used when the text has no [n] markers.
-        # An abstention has nothing to support, so its listed sources are ignored.
+        # listed_sources: numbers the LLM returned separately; used when the text has no [n] markers
         text = normalize_answer(text) or NO_ANSWER
         # An empty or NO_ANSWER text is an abstention, whatever the LLM claimed in `answered`
         answered = answered is not False and text != NO_ANSWER
@@ -58,7 +57,13 @@ class RAGAnswer(BaseModel):
         def exists(number: int) -> bool:
             return 1 <= number <= len(sources)
 
-        cited = extract_citations(text) or (list(dict.fromkeys(listed_sources)) if answered else [])
+        if answered:
+            cited = extract_citations(text) or list(dict.fromkeys(listed_sources))
+        else:
+            # An abstention has nothing to support: sources it mentions were read, not used.
+            # The markers are removed too, so the UI shows no [n] without a citation behind it
+            text = strip_citations(text) or NO_ANSWER
+            cited = []
         citations = [Citation(number=n, hit=sources[n - 1]) for n in cited if exists(n)]
         invalid = [n for n in cited if not exists(n)]
         valid_conflicts = [

@@ -136,9 +136,10 @@ def test_listed_sources_are_used_when_the_text_has_no_markers():
 
 
 def test_abstention_has_no_citations():
-    llm = FakeLLM(submit("The sources do not say when C happened.", sources=[1, 2], answered=False))
+    llm = FakeLLM(submit("The sources do not say when C happened [1][2].", sources=[1, 2], answered=False))
     result = make_agent(llm).answer(QUESTION)
     assert not result.answered and result.citations == []
+    assert result.answer == "The sources do not say when C happened."
 
 
 def test_broken_arguments_become_an_abstention():

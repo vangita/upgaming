@@ -2,6 +2,8 @@ import re
 
 # [1], [1, 2] and the full-width 【1】 that gpt-oss models sometimes write
 CITATION = re.compile(r"[\[【]\s*(\d+(?:\s*,\s*\d+)*)\s*[\]】]")
+# A citation with the space in front of it, so "happened [1]." becomes "happened."
+SPACED_CITATION = re.compile(r"\s*" + CITATION.pattern)
 
 # gpt-oss writes look-alike characters that break exact text matching: narrow and regular
 # no-break spaces (U+202F, U+00A0), the non-breaking hyphen (U+2011) and full-width brackets
@@ -10,6 +12,10 @@ LOOKALIKES = str.maketrans({" ": " ", "\xa0": " ", "‑": "-", "【": "[", "�
 
 def normalize_answer(text: str) -> str:
     return text.translate(LOOKALIKES).strip()
+
+
+def strip_citations(text: str) -> str:
+    return SPACED_CITATION.sub("", text).strip()
 
 
 def extract_citations(text: str) -> list[int]:
