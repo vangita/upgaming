@@ -30,8 +30,12 @@ def chunk_id(chunk: Chunk) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_URL, key))
 
 
+def _condition(field: str, value: str) -> models.FieldCondition:
+    return models.FieldCondition(key=field, match=models.MatchValue(value=value))
+
+
 def _match(field: str, value: str) -> models.Filter:
-    return models.Filter(must=[models.FieldCondition(key=field, match=models.MatchValue(value=value))])
+    return models.Filter(must=[_condition(field, value)])
 
 
 def _sparse(weights: dict[int, float]) -> models.SparseVector:
@@ -108,8 +112,12 @@ class QdrantStore:
             for point in response.points
         ]
 
-    def has_content(self, content_hash: str) -> bool:
-        hash_filter = _match("metadata.content_hash", content_hash)
+    def has_content(self, content_hash: str, exclude_source: str | None = None) -> bool:
+        # exclude_source: ignore the chunks of that file, e.g. its previous version during an update
+        hash_filter = models.Filter(
+            must=[_condition("metadata.content_hash", content_hash)],
+            must_not=[_condition("source", exclude_source)] if exclude_source else None,
+        )
         return self.client.count(self.collection, count_filter=hash_filter).count > 0
 
     def delete_source(self, source: str) -> int:
