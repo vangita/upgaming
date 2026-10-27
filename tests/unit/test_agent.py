@@ -149,7 +149,7 @@ def test_broken_arguments_become_an_abstention():
 
 def test_conflicts_keep_only_valid_entries_and_sources():
     conflicts = [
-        {"description": "Dates differ", "sources": [1, 2, 9]},
+        {"description": "Dates\u202fdiffer", "sources": [1, 2, 9]},
         {"description": "No sources given"},
         {"description": "Only unknown sources", "sources": [9]},
     ]

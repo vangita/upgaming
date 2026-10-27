@@ -2,3 +2,6 @@
 
 # Tests
 pytest==9.1.1
+
+# Sample documents (scripts/make_samples.py)
+fpdf2==2.8.9

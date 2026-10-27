@@ -1,0 +1,14 @@
+Corvane Pay status page - incident history export
+
+Incident: Degraded card payments
+Affected component: Card payments (EU and US)
+
+14 March 2026, 14:20 UTC - Investigating
+We are seeing elevated failure rates for card payments. Our engineers are investigating.
+
+14 March 2026, 14:45 UTC - Identified
+The issue has been traced to a database failover in our primary data center. We are working on a fix.
+
+14 March 2026, 15:10 UTC - Resolved
+Card payments have been working normally since 15:10 UTC. The total disruption lasted about
+65 minutes. We apologise for the inconvenience.

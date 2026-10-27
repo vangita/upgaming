@@ -62,7 +62,10 @@ class RAGAnswer(BaseModel):
         citations = [Citation(number=n, hit=sources[n - 1]) for n in cited if exists(n)]
         invalid = [n for n in cited if not exists(n)]
         valid_conflicts = [
-            conflict.model_copy(update={"sources": [n for n in conflict.sources if exists(n)]})
+            conflict.model_copy(update={
+                "description": normalize_answer(conflict.description),
+                "sources": [n for n in conflict.sources if exists(n)],
+            })
             for conflict in conflicts
             if any(exists(n) for n in conflict.sources)
         ]
