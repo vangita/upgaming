@@ -3,16 +3,35 @@ import pytest
 from app.evaluation.metrics import (
     citation_accuracy,
     citation_coverage,
+    document_title,
     mean,
     ranked_documents,
     recall_at_k,
     reciprocal_rank,
 )
+from app.ingestion.models import Chunk
+from app.storage.qdrant_store import SearchHit
 
 # Question inc-mh1 from stage 11.1: six chunks from four documents
 CHUNK_TITLES = ["Report", "Post-mortem", "Support", "Post-mortem", "Status page", "Report"]
 RANKED = ["Report", "Post-mortem", "Support", "Status page"]
 GOLD = {"Post-mortem", "Support"}
+
+
+def hit(title: str, aliases: list[str] | None = None) -> SearchHit:
+    chunk = Chunk(
+        text="text", title=title, source="test.jsonl", file_format="jsonl", chunk_index=0,
+        char_start=0, char_end=4, metadata={"aliases": aliases} if aliases else {},
+    )
+    return SearchHit(id=title, score=0.5, chunk=chunk)
+
+
+def test_document_title_is_the_chunk_title():
+    assert document_title(hit("Report", aliases=["Q1 report"]), GOLD) == "Report"
+
+
+def test_document_title_uses_a_gold_alias_of_a_deduplicated_paragraph():
+    assert document_title(hit("Postmortem copy", aliases=["Other", "Support"]), GOLD) == "Support"
 
 
 def test_ranked_documents_keeps_each_document_at_its_best_rank():

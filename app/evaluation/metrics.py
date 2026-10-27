@@ -4,6 +4,14 @@ Retrieval metrics count documents, not chunks: gold documents are titles, and th
 return several chunks of one document. `ranked_documents` turns the chunk ranking into a document
 ranking first.
 """
+from app.storage.qdrant_store import SearchHit
+
+
+def document_title(hit: SearchHit, gold: set[str]) -> str:
+    """The title a hit counts as. A paragraph that appeared under several titles is kept once by the
+    deduplication, with the other titles in metadata["aliases"]: a gold alias counts as found."""
+    titles = [hit.chunk.title, *hit.chunk.metadata.get("aliases", [])]
+    return next((title for title in titles if title in gold), hit.chunk.title)
 
 
 def ranked_documents(titles: list[str]) -> list[str]:

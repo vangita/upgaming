@@ -4,11 +4,16 @@ from pathlib import Path
 
 from app.core.config import get_settings
 from app.core.log import setup_logging
+from app.ingestion.chunking.fixed import chunk_fixed
+from app.ingestion.chunking.structured import chunk_structured
 from app.ingestion.parsers.router import SUPPORTED_EXTENSIONS
 from app.ingestion.service import IngestionError, IngestionService
 from app.storage.qdrant_store import QdrantStore
 
 logger = logging.getLogger(__name__)
+
+# The app answers from the structured collection; the fixed one exists to compare the two strategies
+CHUNKERS = {"structured": chunk_structured, "fixed": chunk_fixed}
 
 
 def collect_files(paths: list[Path]) -> list[Path]:
@@ -23,14 +28,18 @@ def collect_files(paths: list[Path]) -> list[Path]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Add, update or delete files in the main Qdrant collection")
+    parser = argparse.ArgumentParser(description="Add, update or delete files in a Qdrant collection")
     parser.add_argument("paths", nargs="*", type=Path, help="files or folders to index")
     parser.add_argument("--delete", nargs="+", default=[], metavar="NAME", help="file names to remove")
+    parser.add_argument(
+        "--chunking", choices=CHUNKERS, default="structured",
+        help="chunking strategy and its collection (default: structured, the one the app uses)",
+    )
     args = parser.parse_args()
 
     setup_logging()
-    store = QdrantStore(get_settings().main_collection)
-    service = IngestionService(store)
+    store = QdrantStore(f"{get_settings().qdrant_collection}_{args.chunking}")
+    service = IngestionService(store, chunker=CHUNKERS[args.chunking])
     store.ensure_collection(service.embedder.dimension)
 
     for name in args.delete:
