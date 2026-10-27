@@ -27,6 +27,10 @@ How to work:
    You can search up to {max_searches} times. New sources continue the numbering.
    Search for each missing fact once: if a search does not find it, do not repeat it with
    a rephrased query - the collection most likely does not contain it.
+   If the question describes someone or something by several attributes (e.g. "the actress and
+   writer") and the sources name several candidates, do not guess which one is meant: search for the
+   candidates by name (one query can hold several names) and use the one the sources describe with
+   every attribute.
 2. Then call `submit_answer` exactly once.
 
 Rules for the answer:
