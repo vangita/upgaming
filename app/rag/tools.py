@@ -29,7 +29,10 @@ SUBMIT_ANSWER_TOOL = {
         "parameters": {
             "type": "object",
             "properties": {
-                "answer": {"type": "string", "description": "The answer with [n] citations"},
+                "answer": {
+                    "type": "string",
+                    "description": "The answer; end every sentence with its source numbers, e.g. [2] or [1][6]",
+                },
                 "sources": {
                     "type": "array",
                     "items": {"type": "integer"},

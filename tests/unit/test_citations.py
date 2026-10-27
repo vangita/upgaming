@@ -30,4 +30,9 @@ def test_no_citations():
 
 
 def test_normalize_answer():
-    assert normalize_answer("  Tim Burton【1】. ") == "Tim Burton[1]."
+    assert normalize_answer("  Tim Burton【1】. ") == "Tim Burton[1]."
+
+
+def test_normalize_look_alike_characters():
+    # Escapes on purpose: these characters are invisible in the editor
+    assert normalize_answer("actress‑writer,\xa0born 1975") == "actress-writer, born 1975"

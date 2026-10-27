@@ -52,8 +52,8 @@ class RAGAnswer(BaseModel):
         # listed_sources: numbers the LLM returned separately; used when the text has no [n] markers.
         # An abstention has nothing to support, so its listed sources are ignored.
         text = normalize_answer(text) or NO_ANSWER
-        if answered is None:
-            answered = text != NO_ANSWER
+        # An empty or NO_ANSWER text is an abstention, whatever the LLM claimed in `answered`
+        answered = answered is not False and text != NO_ANSWER
 
         def exists(number: int) -> bool:
             return 1 <= number <= len(sources)
