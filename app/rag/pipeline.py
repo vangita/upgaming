@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Sequence
 
 from pydantic import BaseModel
 
@@ -16,15 +17,70 @@ class Citation(BaseModel):
     hit: SearchHit
 
 
+class Conflict(BaseModel):
+    description: str
+    sources: list[int]
+
+
 class RAGAnswer(BaseModel):
     question: str
     answer: str
+    # False when the system abstained: the sources do not contain the answer
+    answered: bool
     # Sources the answer cites, in order of first appearance
     citations: list[Citation]
     # Everything the LLM was shown, numbered from 1
     sources: list[SearchHit]
     # Cited numbers that match no source, e.g. [7] when there were 5 sources
     invalid_citations: list[int]
+    # Disagreements between sources that the LLM reported
+    conflicts: list[Conflict] = []
+    # Follow-up search queries the agent ran, in order
+    searches: list[str] = []
+
+    @classmethod
+    def build(
+        cls,
+        question: str,
+        text: str,
+        sources: list[SearchHit],
+        answered: bool | None = None,
+        conflicts: Sequence[Conflict] = (),
+        searches: Sequence[str] = (),
+        listed_sources: Sequence[int] = (),
+    ) -> "RAGAnswer":
+        # listed_sources: numbers the LLM returned separately; used when the text has no [n] markers.
+        # An abstention has nothing to support, so its listed sources are ignored.
+        text = normalize_answer(text) or NO_ANSWER
+        if answered is None:
+            answered = text != NO_ANSWER
+
+        def exists(number: int) -> bool:
+            return 1 <= number <= len(sources)
+
+        cited = extract_citations(text) or (list(dict.fromkeys(listed_sources)) if answered else [])
+        citations = [Citation(number=n, hit=sources[n - 1]) for n in cited if exists(n)]
+        invalid = [n for n in cited if not exists(n)]
+        valid_conflicts = [
+            conflict.model_copy(update={"sources": [n for n in conflict.sources if exists(n)]})
+            for conflict in conflicts
+            if any(exists(n) for n in conflict.sources)
+        ]
+
+        if invalid:
+            logger.warning("Answer cites sources that do not exist: %s", invalid)
+        if answered and not citations:
+            logger.warning("Answer has no valid citations")
+        return cls(
+            question=question,
+            answer=text,
+            answered=answered,
+            citations=citations,
+            sources=sources,
+            invalid_citations=invalid,
+            conflicts=valid_conflicts,
+            searches=list(searches),
+        )
 
 
 class RAGPipeline:
@@ -36,17 +92,5 @@ class RAGPipeline:
         sources = self.retriever.search(question, mode=mode, limit=top_k)
         if not sources:
             logger.info("No sources found, answering without calling the LLM")
-            return RAGAnswer(question=question, answer=NO_ANSWER, citations=[], sources=[], invalid_citations=[])
-
-        text = normalize_answer(self.llm.chat(build_messages(question, sources)))
-        cited = extract_citations(text)
-        citations = [Citation(number=n, hit=sources[n - 1]) for n in cited if 1 <= n <= len(sources)]
-        invalid = [n for n in cited if not 1 <= n <= len(sources)]
-
-        if invalid:
-            logger.warning("Answer cites sources that do not exist: %s", invalid)
-        if not cited and text != NO_ANSWER:
-            logger.warning("Answer has no citations")
-        return RAGAnswer(
-            question=question, answer=text, citations=citations, sources=sources, invalid_citations=invalid
-        )
+            return RAGAnswer.build(question, NO_ANSWER, [])
+        return RAGAnswer.build(question, self.llm.chat(build_messages(question, sources)), sources)

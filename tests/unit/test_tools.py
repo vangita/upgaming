@@ -42,4 +42,4 @@ def test_format_empty_result():
 def test_tool_schemas_have_the_expected_names_and_required_fields():
     assert SEARCH_TOOL["function"]["name"] == "search"
     assert SEARCH_TOOL["function"]["parameters"]["required"] == ["query"]
-    assert SUBMIT_ANSWER_TOOL["function"]["parameters"]["required"] == ["answer", "answered", "conflicts"]
+    assert SUBMIT_ANSWER_TOOL["function"]["parameters"]["required"] == ["answer", "sources", "answered", "conflicts"]

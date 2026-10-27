@@ -30,6 +30,11 @@ SUBMIT_ANSWER_TOOL = {
             "type": "object",
             "properties": {
                 "answer": {"type": "string", "description": "The answer with [n] citations"},
+                "sources": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "description": "Numbers of all sources the answer relies on",
+                },
                 "answered": {
                     "type": "boolean",
                     "description": "false if the sources do not contain the answer",
@@ -51,7 +56,7 @@ SUBMIT_ANSWER_TOOL = {
                     },
                 },
             },
-            "required": ["answer", "answered", "conflicts"],
+            "required": ["answer", "sources", "answered", "conflicts"],
         },
     },
 }
