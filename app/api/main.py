@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="AI Investigation Engine", lifespan=lifespan)
+app = FastAPI(title="AI Engine", lifespan=lifespan)
 
 
 @app.exception_handler(LLMError)
