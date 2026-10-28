@@ -1,0 +1,410 @@
+[
+ {
+  "run": "agent_gpt-oss-120b",
+  "answers": 47,
+  "failure_types": {
+   "retrieval": 1,
+   "generation": 2
+  },
+  "failures": [
+   {
+    "id": "inc-c5",
+    "category": "contradictory",
+    "verdict": "incorrect",
+    "type": "retrieval",
+    "detail": "never read: inc-2041-status-page",
+    "searches": [],
+    "answer": "INC-2041 was resolved at 14:52 UTC.",
+    "note": null
+   },
+   {
+    "id": "hp-multihop4",
+    "category": "multi_hop",
+    "verdict": "partial",
+    "type": "generation",
+    "detail": "read every gold document, but the answer is wrong or incomplete",
+    "searches": [],
+    "answer": "The Uruguayan professional footballer Diego Luz is best known for his playmaking skills, wide passing range, crossing ability and his knack for bending free-kicks with both feet and his head [1]. Lutz Pfannenstiel is best known as one of football’s most famous globetrotters, having played in many countries [6].",
+    "note": "Label noise: the HotpotQA question is garbled ('Luz Pfannenstiel' for Lutz Pfannenstiel) and its gold answer is a phrase ('the best known globetrotters')"
+   },
+   {
+    "id": "hp-multihop6",
+    "category": "multi_hop",
+    "verdict": "incorrect",
+    "type": "generation",
+    "detail": "abstained although it read every gold document",
+    "searches": [],
+    "answer": "I don't have enough information to answer this question.",
+    "note": null
+   }
+  ],
+  "citation_issues": [
+   {
+    "id": "hp-multihop2",
+    "category": "multi_hop",
+    "not_cited": [
+     "Moby Dick—Rehearsed"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-s2",
+    "category": "simple",
+    "not_cited": [],
+    "cited_other": [
+     "Anchor &amp; Braille"
+    ]
+   },
+   {
+    "id": "hp-multihop1",
+    "category": "multi_hop",
+    "not_cited": [
+     "Julian Allen"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop3",
+    "category": "multi_hop",
+    "not_cited": [
+     "2004–05 FC Barcelona season"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop5",
+    "category": "multi_hop",
+    "not_cited": [
+     "Daphnis et Chloé"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop8",
+    "category": "multi_hop",
+    "not_cited": [
+     "Niall Horan"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop11",
+    "category": "multi_hop",
+    "not_cited": [
+     "Dalmatian parliamentary election, 1861"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multidoc3",
+    "category": "multi_doc",
+    "not_cited": [
+     "Amy Tan"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multidoc7",
+    "category": "multi_doc",
+    "not_cited": [
+     "Qwirkle"
+    ],
+    "cited_other": []
+   }
+  ]
+ },
+ {
+  "run": "agent_gpt-oss-20b",
+  "answers": 47,
+  "failure_types": {
+   "retrieval": 1,
+   "generation": 2
+  },
+  "failures": [
+   {
+    "id": "inc-c5",
+    "category": "contradictory",
+    "verdict": "incorrect",
+    "type": "retrieval",
+    "detail": "never read: inc-2041-status-page",
+    "searches": [],
+    "answer": "INC-2041 was resolved at 14:52 UTC.",
+    "note": null
+   },
+   {
+    "id": "hp-multihop4",
+    "category": "multi_hop",
+    "verdict": "partial",
+    "type": "generation",
+    "detail": "read every gold document, but the answer is wrong or incomplete",
+    "searches": [],
+    "answer": "The Uruguayan professional footballer Diego Luz is best known for his playmaking skills, range of passing and crossing ability, and for bending free-kicks with both legs and with his head. Lutz Pfannenstiel is best known as a globetrotter, one of the most famous journeyman footballers.",
+    "note": "Label noise: the HotpotQA question is garbled ('Luz Pfannenstiel' for Lutz Pfannenstiel) and its gold answer is a phrase ('the best known globetrotters')"
+   },
+   {
+    "id": "hp-multidoc2",
+    "category": "multi_doc",
+    "verdict": "incorrect",
+    "type": "generation",
+    "detail": "abstained although it read every gold document",
+    "searches": [
+     "Pokémon: Arceus and the Jewel of Life release date Japan",
+     "Pokémon: Arceus and the Jewel of Life Japanese release date"
+    ],
+    "answer": "The sources do not provide a release date for Pokémon: Arceus and the Jewel of Life, so we cannot determine which film was released first.",
+    "note": null
+   }
+  ],
+  "citation_issues": [
+   {
+    "id": "inc-c1",
+    "category": "contradictory",
+    "not_cited": [],
+    "cited_other": [
+     "INC-2041 Customer support summary"
+    ]
+   },
+   {
+    "id": "inc-c3",
+    "category": "contradictory",
+    "not_cited": [
+     "inc-2041-status-page"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop1",
+    "category": "multi_hop",
+    "not_cited": [
+     "Julian Allen"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop3",
+    "category": "multi_hop",
+    "not_cited": [
+     "2004–05 FC Barcelona season"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop5",
+    "category": "multi_hop",
+    "not_cited": [
+     "Daphnis et Chloé"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop6",
+    "category": "multi_hop",
+    "not_cited": [
+     "Kitzmiller v. Dover Area School District"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop8",
+    "category": "multi_hop",
+    "not_cited": [
+     "Niall Horan"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop11",
+    "category": "multi_hop",
+    "not_cited": [
+     "Dalmatian parliamentary election, 1861"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multidoc3",
+    "category": "multi_doc",
+    "not_cited": [
+     "Amy Tan"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multidoc8",
+    "category": "multi_doc",
+    "not_cited": [
+     "Henri Kontinen"
+    ],
+    "cited_other": []
+   }
+  ]
+ },
+ {
+  "run": "simple_gpt-oss-20b",
+  "answers": 47,
+  "failure_types": {
+   "generation": 7
+  },
+  "failures": [
+   {
+    "id": "inc-c4",
+    "category": "contradictory",
+    "verdict": "incorrect",
+    "type": "generation",
+    "detail": "read both versions but gave one, without a conflict",
+    "searches": [],
+    "answer": "The INC-2041 card payments outage lasted 47 minutes. [1][6]",
+    "note": null
+   },
+   {
+    "id": "inc-c1",
+    "category": "contradictory",
+    "verdict": "incorrect",
+    "type": "generation",
+    "detail": "read both versions but gave one, without a conflict",
+    "searches": [],
+    "answer": "The March disruption was caused by an expired TLS certificate on the internal payment gateway, which led to card payment failures. [3][5][9] Only card payment services were affected. [3][5][9] This is confirmed in the post-mortem (source 3), the Q1 2026 reliability report (source 5), and the post-mortem summary (source 9). [3][5][9]",
+    "note": null
+   },
+   {
+    "id": "inc-c2",
+    "category": "contradictory",
+    "verdict": "incorrect",
+    "type": "generation",
+    "detail": "read both versions but gave one, without a conflict",
+    "searches": [],
+    "answer": "The outage was caused by an expired TLS certificate on the internal payment gateway, which caused the gateway to reject connections from the card processing service and led to a 47-minute failure of card payments. [5][6]",
+    "note": null
+   },
+   {
+    "id": "inc-c3",
+    "category": "contradictory",
+    "verdict": "incorrect",
+    "type": "generation",
+    "detail": "read both versions but gave one, without a conflict",
+    "searches": [],
+    "answer": "No – the post-mortem attributes the outage to an expired TLS certificate on the internal payment gateway, not a database issue [4][5].",
+    "note": null
+   },
+   {
+    "id": "inc-c5",
+    "category": "contradictory",
+    "verdict": "incorrect",
+    "type": "generation",
+    "detail": "read both versions but gave one, without a conflict",
+    "searches": [],
+    "answer": "INC-2041 was resolved at 15:10 UTC on 14 March 2026[7].",
+    "note": null
+   },
+   {
+    "id": "inc-c6",
+    "category": "contradictory",
+    "verdict": "incorrect",
+    "type": "generation",
+    "detail": "read both versions but gave one, without a conflict",
+    "searches": [],
+    "answer": "18% of card transactions failed during the incident [1].",
+    "note": null
+   },
+   {
+    "id": "hp-multihop4",
+    "category": "multi_hop",
+    "verdict": "partial",
+    "type": "generation",
+    "detail": "read every gold document, but the answer is wrong or incomplete",
+    "searches": [],
+    "answer": "Diego Luz is best known for his play-making skills, range of passing and crossing ability, and his ability to bend free-kicks with both legs and score with his head [1].  \nLutz Pfannenstiel is best known as a globetrotter, one of the most famous journeyman footballers [6].",
+    "note": "Label noise: the HotpotQA question is garbled ('Luz Pfannenstiel' for Lutz Pfannenstiel) and its gold answer is a phrase ('the best known globetrotters')"
+   }
+  ],
+  "citation_issues": [
+   {
+    "id": "hp-multihop2",
+    "category": "multi_hop",
+    "not_cited": [
+     "Moby Dick—Rehearsed"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop1",
+    "category": "multi_hop",
+    "not_cited": [
+     "Julian Allen"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop3",
+    "category": "multi_hop",
+    "not_cited": [
+     "2004–05 FC Barcelona season"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop5",
+    "category": "multi_hop",
+    "not_cited": [
+     "Daphnis et Chloé"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop6",
+    "category": "multi_hop",
+    "not_cited": [
+     "Kitzmiller v. Dover Area School District"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop7",
+    "category": "multi_hop",
+    "not_cited": [
+     "Change (Taylor Swift song)"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop8",
+    "category": "multi_hop",
+    "not_cited": [
+     "Niall Horan"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop11",
+    "category": "multi_hop",
+    "not_cited": [
+     "Dalmatian parliamentary election, 1861"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multidoc3",
+    "category": "multi_doc",
+    "not_cited": [
+     "Amy Tan"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multidoc7",
+    "category": "multi_doc",
+    "not_cited": [
+     "Qwirkle"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multidoc8",
+    "category": "multi_doc",
+    "not_cited": [
+     "Henri Kontinen"
+    ],
+    "cited_other": []
+   }
+  ]
+ }
+]
