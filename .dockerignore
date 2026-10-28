@@ -1,0 +1,5 @@
+# Only what the backend image needs: everything else (.env, .venv, data/, tests) stays out
+*
+!requirements.txt
+!app/
+**/__pycache__

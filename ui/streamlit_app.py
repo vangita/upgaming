@@ -2,7 +2,9 @@ import re
 
 import streamlit as st
 
-from ui.api_client import APIClient, APIError
+# Streamlit puts this file's folder on the import path, not the project root, so the import works
+# the same locally and on Streamlit Community Cloud
+from api_client import APIClient, APIError
 
 EXAMPLES = {
     "Task example": "Which system changes caused the payment processing disruption in March, "
