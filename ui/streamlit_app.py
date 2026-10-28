@@ -100,7 +100,9 @@ with st.sidebar:
     search_mode = st.radio("Search mode", ["hybrid", "semantic", "keyword"])
     st.divider()
     try:
-        health = client.health()
+        # The free backend server sleeps after 15 idle minutes, and the first request wakes it up
+        with st.spinner("Connecting to the backend (waking it up can take a minute)..."):
+            health = client.health()
         st.success(f"Backend online · {health['chunks']:,} chunks")
         st.caption(f"LLM: {health['llm_model']}  \nEmbeddings: {health['embedding_model']}")
     except APIError as e:
@@ -145,7 +147,7 @@ with documents_tab:
         # The backend replaces a file with the same name; the UI says so before the user confirms
         existing = indexed.get(uploaded.name)
         if existing and existing["protected"]:
-            st.warning(f"{uploaded.name} is the base dataset and cannot be replaced.")
+            st.warning(f"{uploaded.name} is protected and cannot be replaced.")
         elif existing:
             st.info(f"{uploaded.name} is already indexed ({existing['chunks']} chunks). "
                     "Uploading it replaces the old version.")
@@ -170,7 +172,7 @@ with documents_tab:
         column_config={
             "source": "File",
             "chunks": "Chunks",
-            "protected": st.column_config.CheckboxColumn("Base dataset"),
+            "protected": st.column_config.CheckboxColumn("Protected"),
         },
     )
 
