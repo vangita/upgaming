@@ -1,5 +1,6 @@
 import logging
 import re
+import time
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
@@ -32,6 +33,9 @@ class DailyLimitError(LLMError):
 
 # The provider's rate limit message names the organization; the logs leave its id out
 ORGANIZATION_ID = re.compile(r"org_[A-Za-z0-9]+")
+# After the main model's daily limit is hit, the fallback model answers for this long (seconds)
+# without asking the main model again: every such try costs a rejected request first
+FALLBACK_PERIOD = 600.0
 
 
 def _error_code(error: groq.APIStatusError) -> str | None:
@@ -49,10 +53,20 @@ class Usage:
 
 
 class LLMClient:
-    def __init__(self, api_key: str, model: str, timeout: float = 30.0, max_retries: int = 3) -> None:
+    def __init__(
+        self,
+        api_key: str,
+        model: str,
+        fallback_model: str | None = None,
+        timeout: float = 30.0,
+        max_retries: int = 3,
+    ) -> None:
         # The SDK itself retries connection errors, 408, 409, 429 and 5xx with exponential backoff
         self.client = groq.Groq(api_key=api_key, timeout=timeout, max_retries=max_retries)
         self.model = model
+        # Answers when the main model's daily limit is used up; it has its own limits at the provider
+        self.fallback_model = fallback_model
+        self._fallback_until = 0.0
         self.usage = Usage()
 
     def chat(self, messages: list[Message], temperature: float = 0.0, max_tokens: int = 1024) -> str:
@@ -70,15 +84,26 @@ class LLMClient:
         max_tokens: int = 1024,
     ) -> ChatCompletionMessage:
         # tool_choice: "auto", "none", or {"type": "function", "function": {"name": ...}} to force one tool
-        tool_args = {"tools": tools, "tool_choice": tool_choice} if tools else {}
+        request = {"messages": messages, "temperature": temperature, "max_tokens": max_tokens}
+        if tools:
+            request |= {"tools": tools, "tool_choice": tool_choice}
+        if self.fallback_model and time.monotonic() < self._fallback_until:
+            return self._create(self.fallback_model, request)
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                **tool_args,
+            return self._create(self.model, request)
+        except DailyLimitError:
+            if not self.fallback_model:
+                raise
+            logger.warning(
+                "Daily limit of %s used up: %s answers for the next %.0f minutes",
+                self.model, self.fallback_model, FALLBACK_PERIOD / 60,
             )
+            self._fallback_until = time.monotonic() + FALLBACK_PERIOD
+            return self._create(self.fallback_model, request)
+
+    def _create(self, model: str, request: dict[str, Any]) -> ChatCompletionMessage:
+        try:
+            response = self.client.chat.completions.create(model=model, **request)
         except groq.AuthenticationError as e:
             raise LLMError("The LLM provider rejected the API key") from e
         except groq.RateLimitError as e:
@@ -103,14 +128,18 @@ class LLMClient:
         self.usage.prompt_tokens += usage.prompt_tokens
         self.usage.completion_tokens += usage.completion_tokens
         logger.info(
-            "LLM call: %d prompt + %d completion tokens", usage.prompt_tokens, usage.completion_tokens
+            "LLM call (%s): %d prompt + %d completion tokens", model, usage.prompt_tokens, usage.completion_tokens
         )
         if choice.finish_reason == "length":
-            logger.warning("LLM answer was cut off at max_tokens=%d", max_tokens)
+            logger.warning("LLM answer was cut off at max_tokens=%d", request["max_tokens"])
         return choice.message
 
 
 @lru_cache
 def get_llm() -> LLMClient:
     settings = get_settings()
-    return LLMClient(api_key=settings.groq_api_key.get_secret_value(), model=settings.groq_model)
+    return LLMClient(
+        api_key=settings.groq_api_key.get_secret_value(),
+        model=settings.groq_model,
+        fallback_model=settings.groq_fallback_model,
+    )

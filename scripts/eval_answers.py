@@ -247,6 +247,7 @@ def main() -> None:
     model = args.model or settings.groq_model
     api_key = settings.groq_api_key.get_secret_value()
     retriever = Retriever(QdrantStore(settings.main_collection))
+    # No fallback model, unlike the app: a run must measure the one model in its name
     llm, judge = LLMClient(api_key, model), AnswerJudge(LLMClient(api_key, JUDGE_MODEL))
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 

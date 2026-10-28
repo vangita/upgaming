@@ -10,6 +10,8 @@ class Settings(BaseSettings):
 
     groq_api_key: SecretStr
     groq_model: str = "openai/gpt-oss-120b"
+    # Answers when the main model's daily limit is used up; empty = no fallback
+    groq_fallback_model: str | None = "openai/gpt-oss-20b"
 
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: SecretStr | None = None
@@ -19,7 +21,7 @@ class Settings(BaseSettings):
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
-    @field_validator("qdrant_api_key", mode="before")
+    @field_validator("qdrant_api_key", "groq_fallback_model", mode="before")
     @classmethod
     def empty_to_none(cls, value: str | None) -> str | None:
         return value or None
