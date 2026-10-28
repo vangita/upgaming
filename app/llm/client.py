@@ -1,4 +1,5 @@
 import logging
+import re
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
@@ -19,6 +20,18 @@ class LLMError(RuntimeError):
 
 class ToolCallError(LLMError):
     """The model generated a tool call that the provider rejected (unknown tool or invalid arguments)."""
+
+
+class MinuteLimitError(LLMError):
+    """The provider's per-minute limit was hit: the same request works again within a minute."""
+
+
+class DailyLimitError(LLMError):
+    """The provider's daily limit is used up: retrying soon does not help."""
+
+
+# The provider's rate limit message names the organization; the logs leave its id out
+ORGANIZATION_ID = re.compile(r"org_[A-Za-z0-9]+")
 
 
 def _error_code(error: groq.APIStatusError) -> str | None:
@@ -69,7 +82,12 @@ class LLMClient:
         except groq.AuthenticationError as e:
             raise LLMError("The LLM provider rejected the API key") from e
         except groq.RateLimitError as e:
-            raise LLMError("LLM rate limit reached, please try again in a minute") from e
+            # The message says which limit was hit, e.g. "tokens per minute (TPM)" or "tokens per day (TPD)"
+            message = ORGANIZATION_ID.sub("org_***", str(e))
+            logger.warning("Rate limit: %s", message)
+            if "per day" in message:
+                raise DailyLimitError("The LLM's daily limit is used up, please try again later") from e
+            raise MinuteLimitError("LLM rate limit reached, please try again in a minute") from e
         except groq.APIConnectionError as e:
             raise LLMError("Could not reach the LLM provider") from e
         except groq.BadRequestError as e:

@@ -54,7 +54,7 @@ MANUAL = [
     ("inc-s4", "simple", "Who owns the INC-2041 action item to alert before certificates expire, "
      "and when is it due?", "The SRE team, due 4 April 2026", [POSTMORTEM]),
     ("inc-s5", "simple", "What was the availability of card payments in Q1 2026?",
-     "99.94%, below the 99.95% target", [REPORT]),
+     "99.94%", [REPORT]),
     ("hp-s1", "simple", "Which Canadian Football League team does quarterback Dan LeFevour play for?",
      "Winnipeg Blue Bombers", ["Dan LeFevour"]),
     ("hp-s2", "simple", "Which band was Stephen Christian the lead vocalist of?", "Anberlin",

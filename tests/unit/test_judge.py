@@ -72,6 +72,15 @@ def test_contradictory_question_is_graded_with_the_conflict_rules():
     assert llm.messages[0][0]["content"] == CONFLICT_PROMPT
 
 
+def test_reported_conflicts_are_graded_with_the_answer():
+    # The UI shows them in a box next to the answer: the user reads both
+    llm = FakeLLM()
+    conflicts = ["47 minutes in the post-mortem [1] vs about 65 minutes on the status page [2]"]
+    grade_answer(AnswerJudge(llm), CONTRADICTORY, "It lasted 47 minutes [1].", answered=True, conflicts=conflicts)
+    prompt = llm.messages[0][1]["content"]
+    assert "System answer: It lasted 47 minutes.\nSources disagree: 47 minutes in the post-mortem" in prompt
+
+
 def test_abstaining_on_an_answerable_question_is_incorrect_without_the_judge():
     llm = FakeLLM()
     assert grade_answer(AnswerJudge(llm), ANSWERABLE, "Not enough information.", answered=False).label == "incorrect"

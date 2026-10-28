@@ -7,6 +7,7 @@ own wording) and has its own Groq rate limits, so judging does not use up the an
 daily tokens.
 """
 import re
+from collections.abc import Sequence
 from typing import Literal
 
 from pydantic import BaseModel
@@ -80,13 +81,21 @@ class AnswerJudge:
         return parse_verdict(self.llm.chat(messages, max_tokens=300))
 
 
-def grade_answer(judge: AnswerJudge, question: dict, answer: str, answered: bool) -> Verdict:
-    """Answer Correctness of one evaluation question; the judge is called only when it is needed."""
+def grade_answer(
+    judge: AnswerJudge, question: dict, answer: str, answered: bool, conflicts: Sequence[str] = ()
+) -> Verdict:
+    """Answer Correctness of one evaluation question; the judge is called only when it is needed.
+
+    conflicts: the disagreements the system reported. The UI shows them next to the answer, so the
+    judge grades both, as the user reads them.
+    """
     if question["category"] == "unanswerable":
         if answered:
             return Verdict(label="incorrect", reason="Answered a question the documents cannot answer")
         return Verdict(label="correct", reason="Abstained: the documents do not hold the answer")
     if not answered:
         return Verdict(label="incorrect", reason="Abstained although the documents hold the answer")
+    if conflicts:
+        answer = f"{answer}\nSources disagree: {'; '.join(conflicts)}"
     conflict = question["category"] == "contradictory"
     return judge.grade(question["question"], question["answer"], answer, conflict=conflict)

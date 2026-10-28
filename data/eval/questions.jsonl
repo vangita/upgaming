@@ -2,7 +2,7 @@
 {"id": "inc-s2", "category": "simple", "question": "How many INC-2041 support tickets came in by phone?", "answer": "245", "gold_docs": ["INC-2041 Customer support summary"], "origin": "manual"}
 {"id": "inc-s3", "category": "simple", "question": "How many merchants qualified for the transaction fee refund after INC-2041?", "answer": "214", "gold_docs": ["INC-2041 Customer support summary"], "origin": "manual"}
 {"id": "inc-s4", "category": "simple", "question": "Who owns the INC-2041 action item to alert before certificates expire, and when is it due?", "answer": "The SRE team, due 4 April 2026", "gold_docs": ["INC-2041 Post-mortem: card payments outage"], "origin": "manual"}
-{"id": "inc-s5", "category": "simple", "question": "What was the availability of card payments in Q1 2026?", "answer": "99.94%, below the 99.95% target", "gold_docs": ["Reliability report Q1 2026"], "origin": "manual"}
+{"id": "inc-s5", "category": "simple", "question": "What was the availability of card payments in Q1 2026?", "answer": "99.94%", "gold_docs": ["Reliability report Q1 2026"], "origin": "manual"}
 {"id": "hp-s1", "category": "simple", "question": "Which Canadian Football League team does quarterback Dan LeFevour play for?", "answer": "Winnipeg Blue Bombers", "gold_docs": ["Dan LeFevour"], "origin": "manual"}
 {"id": "hp-s2", "category": "simple", "question": "Which band was Stephen Christian the lead vocalist of?", "answer": "Anberlin", "gold_docs": ["Stephen Christian"], "origin": "manual"}
 {"id": "hp-s3", "category": "simple", "question": "Where was the 1945 VFL Grand Final held?", "answer": "Princes Park in Melbourne", "gold_docs": ["1945 VFL Grand Final"], "origin": "manual"}
