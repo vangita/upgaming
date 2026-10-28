@@ -1,0 +1,94 @@
+{
+ "settings": {
+  "queries": 1000,
+  "load_queries": 400,
+  "top_chunks": 10,
+  "seed": 7,
+  "qdrant_host": "localhost"
+ },
+ "collection": {
+  "name": "documents_structured",
+  "points": 71597,
+  "segments": 4
+ },
+ "latency": [
+  {
+   "step": "query embedding",
+   "n": 1000,
+   "mean_ms": 19.2,
+   "p50_ms": 15.1,
+   "p95_ms": 44.0,
+   "p99_ms": 84.5,
+   "max_ms": 150.8
+  },
+  {
+   "step": "semantic search",
+   "n": 1000,
+   "mean_ms": 27.8,
+   "p50_ms": 25.1,
+   "p95_ms": 43.6,
+   "p99_ms": 53.8,
+   "max_ms": 245.3
+  },
+  {
+   "step": "keyword search",
+   "n": 1000,
+   "mean_ms": 15.5,
+   "p50_ms": 15.1,
+   "p95_ms": 31.1,
+   "p99_ms": 33.2,
+   "max_ms": 39.9
+  },
+  {
+   "step": "hybrid search",
+   "n": 1000,
+   "mean_ms": 33.8,
+   "p50_ms": 31.4,
+   "p95_ms": 50.8,
+   "p99_ms": 62.2,
+   "max_ms": 130.4
+  }
+ ],
+ "load": [
+  {
+   "threads": 1,
+   "searches_per_s": 29.4,
+   "n": 400,
+   "mean_ms": 33.9,
+   "p50_ms": 30.7,
+   "p95_ms": 50.0,
+   "p99_ms": 59.6,
+   "max_ms": 204.3
+  },
+  {
+   "threads": 4,
+   "searches_per_s": 55.0,
+   "n": 400,
+   "mean_ms": 72.6,
+   "p50_ms": 70.7,
+   "p95_ms": 91.7,
+   "p99_ms": 105.4,
+   "max_ms": 120.8
+  },
+  {
+   "threads": 8,
+   "searches_per_s": 58.3,
+   "n": 400,
+   "mean_ms": 136.2,
+   "p50_ms": 131.3,
+   "p95_ms": 190.1,
+   "p99_ms": 227.5,
+   "max_ms": 246.2
+  },
+  {
+   "threads": 16,
+   "searches_per_s": 58.3,
+   "n": 400,
+   "mean_ms": 266.6,
+   "p50_ms": 262.8,
+   "p95_ms": 384.4,
+   "p99_ms": 444.5,
+   "max_ms": 484.5
+  }
+ ]
+}

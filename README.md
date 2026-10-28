@@ -108,7 +108,7 @@ evaluation.
 | Python backend, functional UI | FastAPI + Streamlit: ask, see sources and conflicts, add, update and delete documents |
 | ≥ 50k documents | 66,555 unique HotpotQA paragraphs + the sample documents |
 | Free public deployment, persistence, secrets | Render + Streamlit Community Cloud + Qdrant Cloud; keys only in the hosts' environment settings |
-| Bonus | Model comparison (gpt-oss-120b vs 20b), agentic RAG, caching (answers to repeated questions, embeddings), monitoring (`GET /stats`: questions, cache hits, answer time p50/p95, LLM tokens, fallback calls, errors, also shown in the UI); partly: a prompt-injection rule (tested by hand only) |
+| Bonus | Model comparison (gpt-oss-120b vs 20b), agentic RAG, caching (answers to repeated questions, embeddings), monitoring (`GET /stats`: questions, cache hits, answer time p50/p95, LLM tokens, fallback calls, errors, also shown in the UI), a performance test at full size (1,000 searches over 71,597 chunks, throughput with 1–16 threads); partly: a prompt-injection rule (tested by hand only) |
 
 ## Dataset
 
@@ -210,9 +210,10 @@ but always gave one. All configurations abstained on all 8 unanswerable question
 | | |
 |---|---|
 | Backend memory | 270 MB in the container (643 MB before torch was replaced by ONNX Runtime) |
-| Query embedding | ~23 ms on a laptop CPU |
-| Search | keyword ~18 ms, semantic ~50 ms, hybrid ~52 ms (local Qdrant) |
-| Answer | ~1.6 s on average in the evaluation; 3–6 s for multi-source questions |
+| Query embedding | p50 15 ms, p95 44 ms on a laptop CPU |
+| Search over 71,597 chunks, embedding included (p50 / p95) | keyword 15 / 31 ms, semantic 25 / 44 ms, hybrid 31 / 51 ms |
+| Search throughput (hybrid, threads) | 29 searches/s with 1 thread, 58/s from 8 threads (the CPU is full; more threads only wait longer) |
+| Answer | ~1.6 s on average in the evaluation; 3–6 s for multi-source questions: the LLM takes almost all of it |
 | LLM tokens | ~2,300 per question (agent), ~1,600 (simple) |
 | Indexing the dataset | Embeddings are computed once and cached (`data/processed/*.npz`, keyed by model and chunk file hash); uploading 71,588 points to Qdrant Cloud took 291 s |
 
@@ -295,6 +296,7 @@ python -m scripts.eval_retrieval                       # Recall@K, MRR (no LLM)
 python -m scripts.eval_answers                         # agent and simple with GROQ_MODEL
 python -m scripts.eval_answers --model openai/gpt-oss-20b
 python -m scripts.analyze_errors                       # retrieval vs generation errors
+python -m scripts.perf_search                          # search latency and throughput (no LLM)
 ```
 
 `eval_answers` saves every answer as it goes and continues where it stopped, because the free
@@ -312,7 +314,8 @@ Render environment: `GROQ_API_KEY`, `QDRANT_URL`, `QDRANT_API_KEY` and `PROTECTE
 sample files). Pushes to `main` redeploy the UI; on Render, Auto-Deploy must be on for the API to
 follow. Once, a deploy marked "live" still served the previous code: **Clear build cache & deploy**
 fixed it. A quick check that the new code runs: a field added to a response shows up in
-`/openapi.json`.
+`/openapi.json`. On Streamlit Cloud, a deploy that adds a method to `ui/api_client.py` needs
+**Reboot app**: the HTTP client is cached (`st.cache_resource`) and the cached one is of the old class.
 
 ### Free-tier limits
 
