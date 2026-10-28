@@ -110,7 +110,7 @@ evaluation.
 | Python backend, functional UI | FastAPI + Streamlit: ask, see sources and conflicts, add, update and delete documents |
 | ≥ 50k documents | 66,555 unique HotpotQA paragraphs + the sample documents |
 | Free public deployment, persistence, secrets | Render + Streamlit Community Cloud + Qdrant Cloud; keys only in the hosts' environment settings |
-| Bonus | Model comparison (gpt-oss-120b vs 20b), agentic RAG, caching (answers to repeated questions, embeddings), monitoring (`GET /stats`: questions, cache hits, answer time p50/p95, LLM tokens, fallback calls, errors, also shown in the UI), a performance test at full size (1,000 searches over 71,597 chunks, throughput with 1–16 threads); partly: a prompt-injection rule (tested by hand only) |
+| Bonus | Model comparison (gpt-oss-120b vs 20b), agentic RAG, caching (answers to repeated questions, embeddings), monitoring (`GET /stats`: questions, cache hits, answer time p50/p95, LLM tokens, fallback calls, errors, also shown in the UI), a performance test at full size (1,000 searches over 71,597 chunks, throughput with 1–16 threads); partly: prompt injection (a rule in the prompts, tested by hand; an automated test, `scripts/eval_injection.py`, not run yet) |
 
 ## Dataset
 
@@ -205,7 +205,9 @@ Answers (47 questions, graded by an LLM judge of another model family):
 | simple RAG, gpt-oss-20b | 0.86 | 0 of 6 | 0.99 | 1,639 |
 
 The agent's advantage comes from contradictions: the simple pipeline read both versions every time
-but always gave one. All configurations abstained on all 8 unanswerable questions.
+but always gave one. All configurations abstained on all 8 unanswerable questions. These numbers
+describe the version before the last two fixes (false premises, repeated searches); a re-run with
+them stopped at the daily token limit after 14 questions, all correct (see the report, section 4).
 
 ## Performance and cost
 

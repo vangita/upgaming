@@ -19,6 +19,9 @@ categories, plus 500 HotpotQA questions for retrieval. All numbers come from the
   each, which is within the noise of a 47-question set.
 - Of the agent's 3 wrong answers per model, 1 is a retrieval error (a needed chunk ranked 7th when
   the agent reads 6), 1 is over-caution, and 1 is a question with a broken label.
+- Two fixes came after this evaluation (false premises, repeated searches, see 5.3). They were
+  checked on targeted questions; a full re-run with them stopped at the daily token limit after 14
+  of the 47 questions, all 14 correct. The numbers below describe the version before the fixes.
 
 ## 1. Evaluation set
 
@@ -158,6 +161,12 @@ the LLM sees.
 run per configuration. Results: `answers_*.jsonl` (every answer with its citations, conflicts,
 searches, tokens and the judge's verdict) and `answers_summary.json`.
 
+**Version note.** The three runs in this section used the code before two later changes (5.3): a
+prompt rule against false premises and skipping repeated searches. The deployed configuration was
+evaluated again with the new code (`answers_agent_gpt-oss-120b_v2.jsonl`), but that run stopped at
+the free tier's daily token limit after 14 of the 47 questions (10 simple, 1 multi-hop, 3
+multi-doc). All 14 were correct, as in the first run; the other 33 were not run before the deadline.
+
 | Configuration | Method | Model |
 |---|---|---|
 | agent, gpt-oss-120b | Agent: top 6 chunks, up to 2 follow-up searches of 3 chunks, structured answer with `conflicts` | the deployed model |
@@ -270,13 +279,24 @@ answer is supported, the chain is not fully shown.
   models" instead of abstaining. None of the 8 unanswerable questions had a false premise with
   matching words, so the evaluation could not catch it. A rule was added to both prompts: a source
   answers only if it is about what the question asks about (the same people, events, documents
-  or numbers). With it, the user's question and a second false-premise question were both
-  abstained on (gpt-oss-120b); the check for over-abstention on answerable questions is in
-  progress. The numbers in this report were measured with the earlier prompt.
+  or numbers). With it, gpt-oss-120b abstained on all 5 false-premise questions tried (the user's
+  and four similar ones, e.g. about an incident "INC-2052" that does not exist). Answerable
+  questions checked afterwards: the 14 of the partial re-run (section 4) and two more were correct;
+  *Black Book* was right 1 time in 3 (as unstable as before), and one comparison ("Which film was
+  released first…") was answered wrong once, comparing US instead of Japanese release dates.
+  Whether the rule makes the agent more cautious overall would need the full re-run.
+- **Repeated searches (found on the live demo).** The agent once ran the identical search
+  ("Carice van Houten heritage") twice and so spent both follow-up searches on the wrong actress. A
+  repeated query is now not run: the model is told to try another candidate, and the repeat does
+  not use up a search (at most one repeat, so the loop still ends). It does not help when the model
+  rephrases the same search, which is what happened in the later *Black Book* failures.
 - **Prompt injection (manual, one run).** A document with instructions addressed to the model was
   uploaded and a related question asked: the answer did not follow the instructions (the prompts
   say the sources are data, not instructions). The injected document did take one of the 6 source
-  slots and pushed out a relevant one, which is the chunk-crowding problem again.
+  slots and pushed out a relevant one, which is the chunk-crowding problem again. An automated
+  version, `scripts/eval_injection.py` (five planted attacks: ignore the instructions, a fake system
+  message, reveal the prompt, call the search tool, state a false fact), is in the repository but
+  was not run before the deadline because of the daily token limit.
 - **Non-determinism.** At temperature 0 the agent still gave different answers to the same
   multi-hop question across runs (*Black Book*: right actress, wrong actress, abstention). Each
   configuration was run once, so a single question can flip between runs.
@@ -315,7 +335,9 @@ python -m scripts.build_eval_set                            # data/eval/question
 python -m scripts.eval_retrieval                            # retrieval.json (~2.5 min, no LLM)
 python -m scripts.eval_answers --methods agent              # with GROQ_MODEL (gpt-oss-120b)
 python -m scripts.eval_answers --model openai/gpt-oss-20b   # agent and simple
+python -m scripts.eval_answers --methods agent --tag v2     # a new code version, next to the old results
 python -m scripts.analyze_errors                            # error_analysis.json
+python -m scripts.eval_injection                            # injection.json (planted instructions)
 ```
 
 `eval_answers` saves each answer as soon as it has it and continues where it stopped, so the
