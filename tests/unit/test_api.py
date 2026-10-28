@@ -8,10 +8,11 @@ from qdrant_client.http.exceptions import ResponseHandlingException
 
 from app.api import main
 from app.api.cache import AnswerCache
-from app.api.dependencies import get_agent, get_cache, get_ingestion, get_pipeline, get_store
+from app.api.dependencies import get_agent, get_cache, get_ingestion, get_pipeline, get_stats, get_store
+from app.api.stats import Stats
 from app.ingestion.models import Chunk
 from app.ingestion.service import PROTECTED_SOURCES, IngestionService
-from app.llm.client import LLMError
+from app.llm.client import LLMError, Usage, get_llm
 from app.rag.pipeline import RAGAnswer
 from app.storage.qdrant_store import SearchHit
 
@@ -81,7 +82,8 @@ def api():
     # The lambdas read `state` on every request, so a test can swap a fake before calling
     state = SimpleNamespace(
         store=FakeStore(), agent=FakeRAG(), pipeline=FakeRAG("Simple [1]."), protected=PROTECTED_SOURCES,
-        cache=AnswerCache(),
+        cache=AnswerCache(), stats=Stats(),
+        llm=SimpleNamespace(model="main-model", fallback_model="small-model", usage=Usage(calls=3)),
     )
     main.app.dependency_overrides.update({
         get_store: lambda: state.store,
@@ -89,6 +91,8 @@ def api():
         get_pipeline: lambda: state.pipeline,
         # A new cache per test: otherwise an answer cached in one test would come back in the next
         get_cache: lambda: state.cache,
+        get_stats: lambda: state.stats,
+        get_llm: lambda: state.llm,
         get_ingestion: lambda: IngestionService(state.store, embedder=FakeEmbedder(), protected=state.protected),
     })
     # Without `with`, TestClient skips the lifespan, so no embedding model is loaded
@@ -225,3 +229,23 @@ def test_an_llm_error_is_not_cached(api):
     assert ask(api).status_code == 503
     api.agent = FakeRAG()
     assert ask(api).json()["cached"] is False
+
+
+def test_stats_count_questions_cache_hits_errors_and_documents(api):
+    ask(api)
+    ask(api)  # from the cache
+    ask(api, "Another question?", method="simple")
+    api.agent = FakeRAG(error=LLMError("LLM rate limit reached"))
+    ask(api, "A third question?")
+    upload(api, "report.md", b"The API was down for 40 minutes.")
+    api.client.delete("/documents/report.md")
+
+    stats = api.client.get("/stats").json()
+    assert stats["questions"] == 3
+    assert stats["questions_by_method"] == {"agent": 2, "simple": 1}
+    assert stats["cache_hits"] == 1
+    assert stats["latency"]["answers"] == 2
+    assert stats["errors"] == {"llm": 1}
+    assert stats["documents"] == {"uploaded": 1, "deleted": 1}
+    assert stats["cached_answers"] == 0  # the upload cleared the cache
+    assert stats["llm"]["model"] == "main-model" and stats["llm"]["calls"] == 3

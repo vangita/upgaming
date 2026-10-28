@@ -86,7 +86,7 @@ answer the question were found while building the evaluation set.
 
 ## 6. How AI output was checked
 
-- **Tests**: 131 unit tests with fakes for the LLM, Qdrant and the embedder. For the parts where a
+- **Tests**: 142 unit tests with fakes for the LLM, Qdrant and the embedder. For the parts where a
   wrong test would hide a wrong implementation (RRF, Recall@K, MRR), the tests were first run
   against deliberately broken versions to see that they fail.
 - **Equivalence checks**: when torch was replaced by ONNX Runtime, the new vectors were compared

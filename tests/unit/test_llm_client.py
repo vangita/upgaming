@@ -86,6 +86,8 @@ def test_fallback_model_keeps_answering_without_asking_the_main_model_again():
     client.chat(HI)
     client.chat(HI)
     assert create.asked == ["main-model", "small-model", "small-model"]
+    # Both answers came from the fallback model; the rejected request has no usage
+    assert (client.usage.calls, client.usage.fallback_calls) == (2, 2)
 
 
 def test_main_model_is_asked_again_after_the_fallback_period(monkeypatch):

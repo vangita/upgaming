@@ -9,7 +9,7 @@ Built for the Applied AI task of the Upgaming Talent Growth Program.
 | | |
 |---|---|
 | **Live demo (UI)** | https://upgaming.streamlit.app/ |
-| **API** | https://upgaming.onrender.com/ ([Swagger UI](https://upgaming.onrender.com/docs)) |
+| **API** | https://upgaming.onrender.com/ ([Swagger UI](https://upgaming.onrender.com/docs), [server stats](https://upgaming.onrender.com/stats)) |
 | **Evaluation Report** | [docs/EVALUATION.md](docs/EVALUATION.md) |
 | **AI Usage Report** | [docs/AI_USAGE.md](docs/AI_USAGE.md) |
 
@@ -82,7 +82,7 @@ evaluation.
 | `app/rag/agent.py`, `tools.py` | Multi-step investigation agent with `search` and `submit_answer` tools |
 | `app/rag/pipeline.py`, `citations.py` | Simple RAG, citation parsing and validation, `RAGAnswer` |
 | `app/llm/client.py` | Groq client: error mapping, rate limits, fallback model, token usage |
-| `app/api/` | FastAPI routes, schemas, dependencies |
+| `app/api/` | FastAPI routes, schemas, dependencies, the answer cache and server statistics |
 | `app/evaluation/` | Recall@K, MRR, citation accuracy, LLM judge |
 | `ui/` | Streamlit UI and its HTTP client |
 | `scripts/` | Dataset, chunking, embedding, indexing, ingestion and evaluation commands |
@@ -108,7 +108,7 @@ evaluation.
 | Python backend, functional UI | FastAPI + Streamlit: ask, see sources and conflicts, add, update and delete documents |
 | ≥ 50k documents | 66,555 unique HotpotQA paragraphs + the sample documents |
 | Free public deployment, persistence, secrets | Render + Streamlit Community Cloud + Qdrant Cloud; keys only in the hosts' environment settings |
-| Bonus | Model comparison (gpt-oss-120b vs 20b), agentic RAG, caching (answers to repeated questions, embeddings); partly: a prompt-injection rule (tested by hand only) and token usage in the logs |
+| Bonus | Model comparison (gpt-oss-120b vs 20b), agentic RAG, caching (answers to repeated questions, embeddings), monitoring (`GET /stats`: questions, cache hits, answer time p50/p95, LLM tokens, fallback calls, errors, also shown in the UI); partly: a prompt-injection rule (tested by hand only) |
 
 ## Dataset
 
@@ -280,11 +280,11 @@ deployed; `GROQ_API_KEY` and `QDRANT_API_KEY` are `SecretStr` and never appear i
 python -m pytest
 ```
 
-131 unit tests with fakes for the LLM, the vector store and the embedder (no network, a few
+142 unit tests with fakes for the LLM, the vector store and the embedder (no network, a few
 seconds): the ingestion service (updates, duplicates across files, protected files), RRF, the
 embedder's batching, citations, the simple pipeline, the agent loop (tool calls, forced final
 answer, invalid tool calls), the LLM client (rate limits, fallback), the API (status codes, uploads,
-protected files, the answer cache), the UI's HTTP client, the metrics and the judge. The parsers were checked by
+protected files, the answer cache, the statistics), the UI's HTTP client, the metrics and the judge. The parsers were checked by
 hand on sample and broken files (empty, truncated, password-protected).
 
 ### Evaluation commands
@@ -309,7 +309,10 @@ tier allows 200K tokens per day.
 | Vectors | Qdrant Cloud, free cluster | Only `documents_structured`, filled from the local cache with `index_chunks --strategies structured` |
 
 Render environment: `GROQ_API_KEY`, `QDRANT_URL`, `QDRANT_API_KEY` and `PROTECTED_SOURCES` (the four
-sample files). Pushes to `main` redeploy both the API and the UI.
+sample files). Pushes to `main` redeploy the UI; on Render, Auto-Deploy must be on for the API to
+follow. Once, a deploy marked "live" still served the previous code: **Clear build cache & deploy**
+fixed it. A quick check that the new code runs: a field added to a response shows up in
+`/openapi.json`.
 
 ### Free-tier limits
 
