@@ -19,6 +19,9 @@ class Settings(BaseSettings):
 
     embedding_model: str = "BAAI/bge-small-en-v1.5"
 
+    # Files the API cannot replace or delete besides the base dataset, as a JSON list
+    protected_sources: list[str] = []
+
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     @field_validator("qdrant_api_key", "groq_fallback_model", mode="before")

@@ -52,10 +52,12 @@ def index_strategy(strategy: str, recreate: bool) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Upload cached chunk embeddings to Qdrant")
     parser.add_argument("--recreate", action="store_true", help="drop and rebuild the collections")
+    # Qdrant Cloud's free 1 GB cluster gets only the structured collection, the one the app uses
+    parser.add_argument("--strategies", nargs="+", choices=STRATEGIES, default=list(STRATEGIES))
     args = parser.parse_args()
 
     setup_logging()
-    for strategy in STRATEGIES:
+    for strategy in args.strategies:
         index_strategy(strategy, args.recreate)
 
 

@@ -9,7 +9,7 @@ from qdrant_client.http.exceptions import ResponseHandlingException
 from app.api import main
 from app.api.dependencies import get_agent, get_ingestion, get_pipeline, get_store
 from app.ingestion.models import Chunk
-from app.ingestion.service import IngestionService
+from app.ingestion.service import PROTECTED_SOURCES, IngestionService
 from app.llm.client import LLMError
 from app.rag.pipeline import RAGAnswer
 from app.storage.qdrant_store import SearchHit
@@ -78,12 +78,14 @@ class FakeRAG:
 @pytest.fixture
 def api():
     # The lambdas read `state` on every request, so a test can swap a fake before calling
-    state = SimpleNamespace(store=FakeStore(), agent=FakeRAG(), pipeline=FakeRAG("Simple [1]."))
+    state = SimpleNamespace(
+        store=FakeStore(), agent=FakeRAG(), pipeline=FakeRAG("Simple [1]."), protected=PROTECTED_SOURCES,
+    )
     main.app.dependency_overrides.update({
         get_store: lambda: state.store,
         get_agent: lambda: state.agent,
         get_pipeline: lambda: state.pipeline,
-        get_ingestion: lambda: IngestionService(state.store, embedder=FakeEmbedder()),
+        get_ingestion: lambda: IngestionService(state.store, embedder=FakeEmbedder(), protected=state.protected),
     })
     # Without `with`, TestClient skips the lifespan, so no embedding model is loaded
     state.client = TestClient(main.app)
@@ -174,4 +176,13 @@ def test_delete_removes_the_file(api):
 
 def test_base_dataset_cannot_be_deleted(api):
     response = api.client.delete("/documents/hotpotqa_paragraphs.jsonl")
-    assert response.status_code == 400 and "base dataset" in response.json()["detail"]
+    assert response.status_code == 400 and "protected" in response.json()["detail"]
+
+
+def test_files_protected_by_the_deployment_cannot_be_changed(api):
+    upload(api, "sample.md", b"The API was down for 40 minutes.")
+    api.protected = PROTECTED_SOURCES | {"sample.md"}
+    assert api.client.get("/documents").json() == [{"source": "sample.md", "chunks": 1, "protected": True}]
+    assert api.client.delete("/documents/sample.md").status_code == 400
+    assert upload(api, "sample.md", b"A new version.").status_code == 400
+    assert api.client.get("/documents").json()[0]["chunks"] == 1

@@ -14,7 +14,8 @@ from app.storage.qdrant_store import QdrantStore
 logger = logging.getLogger(__name__)
 
 # The base dataset is indexed by scripts/index_chunks.py. Replacing it through an upload
-# would delete ~70k chunks that take hours to embed again
+# would delete ~70k chunks that take hours to embed again. The API can protect more files
+# (settings.protected_sources); the command-line scripts manage every file
 PROTECTED_SOURCES = frozenset({"hotpotqa_paragraphs.jsonl"})
 
 
@@ -33,11 +34,6 @@ class IngestResult(BaseModel):
     duplicates: list[str]
 
 
-def _check_not_protected(source: str) -> None:
-    if source in PROTECTED_SOURCES:
-        raise IngestionError(f"{source} is the base dataset and cannot be changed through uploads")
-
-
 class IngestionService:
     """Adds, updates and deletes files: parse -> dedup -> chunk -> embed -> upsert.
 
@@ -49,14 +45,21 @@ class IngestionService:
         store: QdrantStore,
         embedder: Embedder | None = None,
         chunker: Callable[[Document], list[Chunk]] = chunk_structured,
+        protected: frozenset[str] = PROTECTED_SOURCES,
     ) -> None:
         self.store = store
         self.embedder = embedder or get_embedder()
         self.chunker = chunker
+        # Files that cannot be replaced or deleted through this service
+        self.protected = protected
+
+    def _check_not_protected(self, source: str) -> None:
+        if source in self.protected:
+            raise IngestionError(f"{source} is protected and cannot be changed through uploads")
 
     def ingest_file(self, path: Path) -> IngestResult:
         source = path.name
-        _check_not_protected(source)
+        self._check_not_protected(source)
         try:
             documents = deduplicate(parse_file(path))
         except UnsupportedFormatError as e:
@@ -87,5 +90,5 @@ class IngestionService:
         )
 
     def delete(self, source: str) -> int:
-        _check_not_protected(source)
+        self._check_not_protected(source)
         return self.store.delete_source(source)

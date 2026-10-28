@@ -13,7 +13,7 @@ from app.api.dependencies import get_agent, get_ingestion, get_pipeline, get_ret
 from app.api.schemas import AskRequest, AskResponse, DeleteResponse, DocumentInfo, HealthResponse
 from app.core.config import get_settings
 from app.core.log import setup_logging
-from app.ingestion.service import PROTECTED_SOURCES, IngestionError, IngestionService, IngestResult
+from app.ingestion.service import IngestionError, IngestionService, IngestResult
 from app.llm.client import LLMError
 from app.rag.agent import InvestigationAgent
 from app.rag.pipeline import RAGPipeline
@@ -91,10 +91,10 @@ def ask(
 
 
 @app.get("/documents")
-def list_documents(store: Annotated[QdrantStore, Depends(get_store)]) -> list[DocumentInfo]:
+def list_documents(service: Annotated[IngestionService, Depends(get_ingestion)]) -> list[DocumentInfo]:
     return [
-        DocumentInfo(source=source, chunks=chunks, protected=source in PROTECTED_SOURCES)
-        for source, chunks in sorted(store.list_sources().items())
+        DocumentInfo(source=source, chunks=chunks, protected=source in service.protected)
+        for source, chunks in sorted(service.store.list_sources().items())
     ]
 
 

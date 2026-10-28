@@ -70,7 +70,7 @@ class AskResponse(BaseModel):
 class DocumentInfo(BaseModel):
     source: str
     chunks: int
-    # The base dataset cannot be replaced or deleted through the API
+    # The base dataset (and on the demo, the sample documents) cannot be replaced or deleted
     protected: bool
 
 
