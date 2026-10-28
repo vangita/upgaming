@@ -3,8 +3,9 @@
 1. Answers: every question goes through the method as the app runs it (hybrid search), with the app's
    LLM or another one (--model). The answer, cited documents, conflicts, LLM calls, tokens and time
    are appended at once to data/eval/results/answers_<method>_<model>.jsonl. A new run continues
-   where the last one stopped, so the daily rate limit only pauses the evaluation. Delete the file to
-   answer again from scratch (e.g. after a prompt change).
+   where the last one stopped, so the daily rate limit only pauses the evaluation. To evaluate a new
+   version of the code (e.g. a prompt change) next to the old results, give it a tag: --tag v2 writes
+   answers_<method>_<model>_v2.jsonl.
 2. Grading: the LLM judge (another model with its own rate limits) grades answers without a verdict;
    --regrade grades all of them again (e.g. after a change to the judge or to a reference answer).
 3. Metrics of every results file, per question category -> data/eval/results/answers_summary.json.
@@ -70,9 +71,10 @@ def with_retries(call: Callable[[], T]) -> T:
     return call()
 
 
-def run_name(method: str, model: str) -> str:
-    # "agent" + "openai/gpt-oss-120b" -> "agent_gpt-oss-120b"
-    return f"{method}_{model.split('/')[-1]}"
+def run_name(method: str, model: str, tag: str | None = None) -> str:
+    # "agent" + "openai/gpt-oss-120b" (+ "v2") -> "agent_gpt-oss-120b" ("agent_gpt-oss-120b_v2")
+    name = f"{method}_{model.split('/')[-1]}"
+    return f"{name}_{tag}" if tag else name
 
 
 def results_file(name: str) -> Path:
@@ -234,6 +236,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--methods", nargs="+", choices=METHODS, default=list(METHODS))
     parser.add_argument("--model", help="the answering LLM (default: the app's GROQ_MODEL)")
+    parser.add_argument("--tag", help="a name for this version of the code, kept apart from earlier results")
     parser.add_argument("--only", nargs="+", metavar="ID", help="only these question ids, e.g. for a pilot run")
     parser.add_argument("--regrade", action="store_true", help="grade the saved answers again")
     args = parser.parse_args()
@@ -252,7 +255,7 @@ def main() -> None:
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
     for method in args.methods:
-        name = run_name(method, model)
+        name = run_name(method, model, args.tag)
         # The judge has its own rate limits, so the answers so far are graded even after a stop
         finished = run_answers(name, METHODS[method](retriever, llm=llm), questions)
         run_judge(name, by_id, judge, regrade=args.regrade)

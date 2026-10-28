@@ -19,6 +19,14 @@ from app.retrieval.retriever import Retriever, SearchMode
 logger = logging.getLogger(__name__)
 
 FORCE_SUBMIT = {"type": "function", "function": {"name": SUBMIT_ANSWER}}
+# The answer to a search the model already ran: the same query finds the same sources, so it is not
+# run again, and the model is pointed to the other way forward
+REPEATED_SEARCH = (
+    "You already ran this search: its sources are above, and running it again finds nothing new. "
+    "If the sources name other candidates for what the question asks about, search for one of them "
+    "by name; otherwise call submit_answer."
+)
+MAX_REPEATS = 1
 
 
 def _arguments(call: ChatCompletionMessageToolCall) -> dict:
@@ -28,6 +36,11 @@ def _arguments(call: ChatCompletionMessageToolCall) -> dict:
         logger.warning("Tool call %s has invalid JSON arguments", call.function.name)
         return {}
     return arguments if isinstance(arguments, dict) else {}
+
+
+def _normalized(query: str) -> str:
+    # Case and spacing do not make a new search
+    return " ".join(query.split()).casefold()
 
 
 def _assistant_turn(message: ChatCompletionMessage) -> Message:
@@ -74,8 +87,11 @@ class InvestigationAgent:
 
         messages = build_messages(question, initial, system=agent_system_prompt(self.max_searches))
         searches: list[str] = []
+        repeats = 0
 
-        while len(searches) < self.max_searches:
+        # A repeated search is not run and does not use up a search, so the model can still try
+        # another one; only one repeat is allowed, so a model that keeps repeating cannot loop
+        while len(searches) - repeats < self.max_searches and repeats <= MAX_REPEATS:
             try:
                 message = self.llm.complete(messages, tools=[SEARCH_TOOL, SUBMIT_ANSWER_TOOL])
             except ToolCallError:
@@ -92,10 +108,17 @@ class InvestigationAgent:
             messages.append(_assistant_turn(message))
             for call in message.tool_calls:
                 query = str(_arguments(call).get("query", "")).strip()
+                repeated = _normalized(query) in {_normalized(earlier) for earlier in searches}
                 searches.append(query)
-                found = sources.add(self.retriever.search(query, mode=mode, limit=self.search_k)) if query else []
-                logger.info("Agent search %d: %r -> %d sources", len(searches), query, len(found))
-                messages.append({"role": "tool", "tool_call_id": call.id, "content": format_search_result(found)})
+                if repeated:
+                    repeats += 1
+                    logger.info("Agent search %d: %r repeats an earlier search", len(searches), query)
+                    content = REPEATED_SEARCH
+                else:
+                    found = sources.add(self.retriever.search(query, mode=mode, limit=self.search_k)) if query else []
+                    logger.info("Agent search %d: %r -> %d sources", len(searches), query, len(found))
+                    content = format_search_result(found)
+                messages.append({"role": "tool", "tool_call_id": call.id, "content": content})
 
         # Out of searches (or the model broke a tool call): only submit_answer is offered now
         messages.append({"role": "user", "content": FINAL_INSTRUCTION})

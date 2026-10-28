@@ -48,3 +48,15 @@ def test_clear():
     cache.put(request("Who?"), response("A"))
     cache.clear()
     assert cache.get(request("Who?")) is None
+
+
+def test_an_old_answer_expires(monkeypatch):
+    clock = [1000.0]
+    monkeypatch.setattr("app.api.cache.time.monotonic", lambda: clock[0])
+    cache = AnswerCache(max_age_s=60)
+    cache.put(request("Who?"), response("A"))
+    clock[0] += 59
+    assert cache.get(request("Who?")).answer == "A"
+    clock[0] += 2
+    assert cache.get(request("Who?")) is None
+    assert len(cache) == 0

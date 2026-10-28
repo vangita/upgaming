@@ -57,6 +57,9 @@ produced, and where it was wrong. The incidents below were logged while they hap
 | Stage 10 | The multi-hop example (*Black Book*) gave different answers, sometimes "not enough information" | A prompt rule for questions that describe someone by several attributes; the remaining randomness is documented |
 | Stage 11 | The judge graded "About 12% of card transactions failed" PARTIAL for a contradiction question, after Claude had reported its judge prompt as fixed | A separate judge prompt for contradictions, calibrated on 12 cases × 2 runs |
 | Stage 12 | On the live demo: after I deleted my uploaded document, the same question was answered from an unrelated paragraph ("false premise") instead of "not enough information" | A prompt rule that a source must be about what the question asks about (see the Evaluation Report, 5.3) |
+| Bonus | The answer cache "did not work" on the live demo: the same question got a new text every time | Three causes: I had not pushed; Render's Auto-Deploy was off; and a deploy marked "live" still ran the old code, until I used "Clear build cache & deploy" |
+| Bonus | *Black Book* on the live demo: the agent ran the very same search ("Carice van Houten heritage") twice, so no search was left for the right actress | A repeated search is no longer run, does not use up a search, and the model is told to try another candidate |
+| Bonus | After adding the server statistics, the live UI crashed with `AttributeError` on `client.stats()` | Streamlit Cloud kept the HTTP client of the old class in its cache: "Reboot app" fixed it; documented in the README |
 
 ## 5. Where the AI was wrong, and how it was caught
 
@@ -79,6 +82,9 @@ produced, and where it was wrong. The incidents below were logged while they hap
 | 11 | A reference answer included a detail the question did not ask for | A correct answer graded PARTIAL | Reference fixed, re-graded |
 | 11 | The daily token limit (200K per model) was not checked when the evaluation was planned; Claude's own experiments that day had used much of it | The evaluation stopped with "tokens per day" | Resumable evaluation, per-minute vs daily limit errors, the main comparison run on gpt-oss-20b, a fallback model in the app |
 | 12 | The deployment plan assumed free Docker Spaces | My account (see section 3) | Render + Streamlit Cloud; ONNX Runtime instead of torch (643 → 287 MB), vectors checked identical |
+| Bonus | The first version of the repeated-search fix still counted the repeat as a search, so the hint to try another candidate could never be used | Claude, re-reading the change before reporting it | The repeat does not use up a search; at most one repeat, so the loop still ends |
+| Bonus | A helper script that edits files failed halfway and emptied `tests/unit/test_api.py` | The test count dropped | The file was restored from git and the change made again with plain edits |
+| Final | A review against the task found two API tests that passed only because my `.env` was present, and no unit tests for chunking, deduplication and BM25 | An audit I asked for, and running the tests from a folder without `.env` | A placeholder key for tests (`tests/conftest.py`), 22 new tests, GitHub Actions running all 167 tests on every push |
 
 Claude also caught problems that were not its own: a `git add` I typed over two lines left one
 file out of a commit (seen in `git status`), and HotpotQA questions whose gold answer does not
@@ -86,7 +92,7 @@ answer the question were found while building the evaluation set.
 
 ## 6. How AI output was checked
 
-- **Tests**: 142 unit tests with fakes for the LLM, Qdrant and the embedder. For the parts where a
+- **Tests**: 167 unit tests with fakes for the LLM, Qdrant and the embedder. For the parts where a
   wrong test would hide a wrong implementation (RRF, Recall@K, MRR), the tests were first run
   against deliberately broken versions to see that they fail.
 - **Equivalence checks**: when torch was replaced by ONNX Runtime, the new vectors were compared

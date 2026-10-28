@@ -6,6 +6,8 @@ and says "not enough information" instead of guessing.
 
 Built for the Applied AI task of the Upgaming Talent Growth Program.
 
+[![tests](https://github.com/vangita/upgaming/actions/workflows/tests.yml/badge.svg)](https://github.com/vangita/upgaming/actions/workflows/tests.yml)
+
 | | |
 |---|---|
 | **Live demo (UI)** | https://upgaming.streamlit.app/ |
@@ -268,7 +270,8 @@ Files can also be managed from the command line: `python -m scripts.ingest_files
 | `QDRANT_COLLECTION` | `documents` | Collection prefix: `documents_structured` (used by the app), `documents_fixed` |
 | `EMBEDDING_MODEL` | `BAAI/bge-small-en-v1.5` | Embedding model (its ONNX export) |
 | `PROTECTED_SOURCES` | `[]` | JSON list of files the API cannot replace or delete |
-| `ANSWER_CACHE_SIZE` | `256` | Recent answers kept for repeated questions (cleared when documents change); 0 = off |
+| `ANSWER_CACHE_SIZE` | `256` | Recent answers kept for repeated questions (cleared when documents change through the API); 0 = off |
+| `ANSWER_CACHE_TTL_S` | `3600` | Seconds an answer stays cached; files indexed with the scripts reach the answers after at most this long |
 | `LOG_LEVEL` | `INFO` | Logging level |
 | `API_URL` (UI only) | `http://127.0.0.1:8000` | Where the UI finds the API |
 
@@ -281,12 +284,15 @@ deployed; `GROQ_API_KEY` and `QDRANT_API_KEY` are `SecretStr` and never appear i
 python -m pytest
 ```
 
-142 unit tests with fakes for the LLM, the vector store and the embedder (no network, a few
-seconds): the ingestion service (updates, duplicates across files, protected files), RRF, the
-embedder's batching, citations, the simple pipeline, the agent loop (tool calls, forced final
-answer, invalid tool calls), the LLM client (rate limits, fallback), the API (status codes, uploads,
-protected files, the answer cache, the statistics), the UI's HTTP client, the metrics and the judge. The parsers were checked by
-hand on sample and broken files (empty, truncated, password-protected).
+167 unit tests with fakes for the LLM, the vector store and the embedder (no network, no keys, a
+few seconds): both chunking strategies, deduplication, the BM25 encoder, RRF, the ingestion service
+(updates, duplicates across files, protected files), the embedder's batching, citations, the simple
+pipeline, the agent loop (tool calls, forced final answer, invalid and repeated tool calls), the LLM
+client (rate limits, fallback), the API (status codes, uploads, protected files, the answer cache,
+the statistics), the UI's HTTP client, the metrics and the judge. They run on every push in GitHub
+Actions (`.github/workflows/tests.yml`). The parsers were checked by hand on sample and broken files
+(empty, truncated, password-protected); the search against a real Qdrant is covered by the
+evaluation scripts rather than by automated tests.
 
 ### Evaluation commands
 
@@ -297,6 +303,7 @@ python -m scripts.eval_answers                         # agent and simple with G
 python -m scripts.eval_answers --model openai/gpt-oss-20b
 python -m scripts.analyze_errors                       # retrieval vs generation errors
 python -m scripts.perf_search                          # search latency and throughput (no LLM)
+python -m scripts.eval_injection                       # does the agent obey instructions planted in a source?
 ```
 
 `eval_answers` saves every answer as it goes and continues where it stopped, because the free
@@ -328,6 +335,9 @@ fixed it. A quick check that the new code runs: a field added to a response show
 
 ## Limitations and future work
 
+- **Open demo API**: there is no login or per-client rate limit. Visitors can use up the daily LLM
+  tokens (the answer cache and the fallback model soften this) or upload files up to 10 MB each into
+  the 1 GB database; the sample documents are protected from deletion.
 - **Chunk crowding**: several chunks of one document can fill the 6 sources the agent reads. In
   the evaluation this hid the status page in one contradiction question (it was chunk #7). A limit
   of chunks per document or a larger `top_k` would help.

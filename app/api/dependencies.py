@@ -40,7 +40,8 @@ def get_stats() -> Stats:
 
 @lru_cache
 def get_cache() -> AnswerCache:
-    return AnswerCache(get_settings().answer_cache_size)
+    settings = get_settings()
+    return AnswerCache(settings.answer_cache_size, settings.answer_cache_ttl_s)
 
 
 @lru_cache

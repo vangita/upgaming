@@ -5,7 +5,7 @@ from groq.types.chat.chat_completion_message_tool_call import Function
 
 from app.ingestion.models import Chunk
 from app.llm.client import ToolCallError
-from app.rag.agent import FORCE_SUBMIT, InvestigationAgent
+from app.rag.agent import FORCE_SUBMIT, REPEATED_SEARCH, InvestigationAgent
 from app.rag.prompts import FINAL_INSTRUCTION, NO_ANSWER
 from app.storage.qdrant_store import SearchHit
 
@@ -163,3 +163,29 @@ def test_no_sources_means_no_llm_call():
     llm = FakeLLM()
     result = make_agent(llm, results={}).answer(QUESTION)
     assert result.answer == NO_ANSWER and llm.calls == []
+
+
+def test_a_repeated_search_is_not_run_and_leaves_room_for_another():
+    # Seen live: "Carice van Houten heritage" searched twice, so no search was left for Halina Reijn
+    llm = FakeLLM(
+        search("Carice van Houten heritage"),
+        search("carice van  Houten heritage", call_id="call_2"),
+        search("Halina Reijn", call_id="call_3"),
+        submit("Halina Reijn is Dutch [3].", sources=[3]),
+    )
+    results = {QUESTION: [hit("A")], "Carice van Houten heritage": [hit("C")], "Halina Reijn": [hit("H")]}
+    agent = make_agent(llm, results=results)
+    result = agent.answer(QUESTION)
+    assert agent.retriever.queries == [QUESTION, "Carice van Houten heritage", "Halina Reijn"]
+    assert llm.calls[2]["messages"][-1] == {"role": "tool", "tool_call_id": "call_2", "content": REPEATED_SEARCH}
+    assert cited(result) == [(3, "H")]
+    assert result.searches == ["Carice van Houten heritage", "carice van  Houten heritage", "Halina Reijn"]
+
+
+def test_a_model_that_keeps_repeating_a_search_is_stopped():
+    llm = FakeLLM(search("X"), search("X", call_id="call_2"), search("x", call_id="call_3"), submit("Unknown.", answered=False))
+    agent = make_agent(llm, results={QUESTION: [hit("A")], "X": [hit("X")]})
+    agent.answer(QUESTION)
+    assert agent.retriever.queries == [QUESTION, "X"]
+    # One repeat is let through, the second ends the searching: the last call can only submit
+    assert len(llm.calls) == 4 and llm.calls[-1]["tools"] == ["submit_answer"]
