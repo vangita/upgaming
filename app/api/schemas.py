@@ -38,6 +38,8 @@ class AskResponse(BaseModel):
     conflicts: list[Conflict]
     searches: list[str]
     duration_ms: int
+    # True when the answer was given earlier to the same question and comes from the cache
+    cached: bool = False
 
     @classmethod
     def from_answer(cls, answer: RAGAnswer, duration_ms: int) -> "AskResponse":

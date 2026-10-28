@@ -108,7 +108,7 @@ evaluation.
 | Python backend, functional UI | FastAPI + Streamlit: ask, see sources and conflicts, add, update and delete documents |
 | ≥ 50k documents | 66,555 unique HotpotQA paragraphs + the sample documents |
 | Free public deployment, persistence, secrets | Render + Streamlit Community Cloud + Qdrant Cloud; keys only in the hosts' environment settings |
-| Bonus | Model comparison (gpt-oss-120b vs 20b), agentic RAG, embedding cache; partly: a prompt-injection rule (tested by hand only) and token usage in the logs |
+| Bonus | Model comparison (gpt-oss-120b vs 20b), agentic RAG, caching (answers to repeated questions, embeddings); partly: a prompt-injection rule (tested by hand only) and token usage in the logs |
 
 ## Dataset
 
@@ -216,8 +216,11 @@ but always gave one. All configurations abstained on all 8 unanswerable question
 | LLM tokens | ~2,300 per question (agent), ~1,600 (simple) |
 | Indexing the dataset | Embeddings are computed once and cached (`data/processed/*.npz`, keyed by model and chunk file hash); uploading 71,588 points to Qdrant Cloud took 291 s |
 
-Cost control: the agent searches at most twice, the judge runs on a separate model, the evaluation
-paces itself under the per-minute token limit, and the embedding model runs locally (no API cost).
+Cost control: a question asked again (same method and search mode, any case or spacing) is
+answered from an in-memory cache without an LLM call, and the cache is cleared whenever a document
+is added, updated or deleted; the agent searches at most twice; the judge runs on a separate
+model; the evaluation paces itself under the per-minute token limit; and the embedding model runs
+locally (no API cost).
 
 ## Running locally
 
@@ -264,6 +267,7 @@ Files can also be managed from the command line: `python -m scripts.ingest_files
 | `QDRANT_COLLECTION` | `documents` | Collection prefix: `documents_structured` (used by the app), `documents_fixed` |
 | `EMBEDDING_MODEL` | `BAAI/bge-small-en-v1.5` | Embedding model (its ONNX export) |
 | `PROTECTED_SOURCES` | `[]` | JSON list of files the API cannot replace or delete |
+| `ANSWER_CACHE_SIZE` | `256` | Recent answers kept for repeated questions (cleared when documents change); 0 = off |
 | `LOG_LEVEL` | `INFO` | Logging level |
 | `API_URL` (UI only) | `http://127.0.0.1:8000` | Where the UI finds the API |
 
@@ -276,11 +280,11 @@ deployed; `GROQ_API_KEY` and `QDRANT_API_KEY` are `SecretStr` and never appear i
 python -m pytest
 ```
 
-122 unit tests with fakes for the LLM, the vector store and the embedder (no network, a few
+131 unit tests with fakes for the LLM, the vector store and the embedder (no network, a few
 seconds): the ingestion service (updates, duplicates across files, protected files), RRF, the
 embedder's batching, citations, the simple pipeline, the agent loop (tool calls, forced final
 answer, invalid tool calls), the LLM client (rate limits, fallback), the API (status codes, uploads,
-protected files), the UI's HTTP client, the metrics and the judge. The parsers were checked by
+protected files, the answer cache), the UI's HTTP client, the metrics and the judge. The parsers were checked by
 hand on sample and broken files (empty, truncated, password-protected).
 
 ### Evaluation commands

@@ -7,7 +7,8 @@ from fastapi.testclient import TestClient
 from qdrant_client.http.exceptions import ResponseHandlingException
 
 from app.api import main
-from app.api.dependencies import get_agent, get_ingestion, get_pipeline, get_store
+from app.api.cache import AnswerCache
+from app.api.dependencies import get_agent, get_cache, get_ingestion, get_pipeline, get_store
 from app.ingestion.models import Chunk
 from app.ingestion.service import PROTECTED_SOURCES, IngestionService
 from app.llm.client import LLMError
@@ -80,11 +81,14 @@ def api():
     # The lambdas read `state` on every request, so a test can swap a fake before calling
     state = SimpleNamespace(
         store=FakeStore(), agent=FakeRAG(), pipeline=FakeRAG("Simple [1]."), protected=PROTECTED_SOURCES,
+        cache=AnswerCache(),
     )
     main.app.dependency_overrides.update({
         get_store: lambda: state.store,
         get_agent: lambda: state.agent,
         get_pipeline: lambda: state.pipeline,
+        # A new cache per test: otherwise an answer cached in one test would come back in the next
+        get_cache: lambda: state.cache,
         get_ingestion: lambda: IngestionService(state.store, embedder=FakeEmbedder(), protected=state.protected),
     })
     # Without `with`, TestClient skips the lifespan, so no embedding model is loaded
@@ -186,3 +190,38 @@ def test_files_protected_by_the_deployment_cannot_be_changed(api):
     assert api.client.delete("/documents/sample.md").status_code == 400
     assert upload(api, "sample.md", b"A new version.").status_code == 400
     assert api.client.get("/documents").json()[0]["chunks"] == 1
+
+
+def ask(api, question="Who wrote the report?", **settings):
+    return api.client.post("/ask", json={"question": question, **settings})
+
+
+def test_repeated_question_comes_from_the_cache(api):
+    first = ask(api).json()
+    second = ask(api, "  who wrote THE report?").json()
+    assert (first["cached"], second["cached"]) == (False, True)
+    assert second["answer"] == first["answer"]
+    assert second["question"] == "  who wrote THE report?"
+    assert len(api.agent.calls) == 1
+
+
+def test_another_method_or_search_mode_is_not_the_same_question(api):
+    ask(api)
+    assert ask(api, method="simple").json()["cached"] is False
+    assert ask(api, search_mode="keyword").json()["cached"] is False
+
+
+def test_changing_the_documents_clears_the_cache(api):
+    ask(api)
+    upload(api, "report.md", b"The API was down for 40 minutes.")
+    assert ask(api).json()["cached"] is False
+    api.client.delete("/documents/report.md")
+    assert ask(api).json()["cached"] is False
+    assert len(api.agent.calls) == 3
+
+
+def test_an_llm_error_is_not_cached(api):
+    api.agent = FakeRAG(error=LLMError("LLM rate limit reached"))
+    assert ask(api).status_code == 503
+    api.agent = FakeRAG()
+    assert ask(api).json()["cached"] is False

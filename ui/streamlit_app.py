@@ -71,6 +71,8 @@ def show_answer(answer: dict) -> None:
         st.error(f"**Sources disagree:** {conflict['description']} {numbers}")
 
     details = [f"{answer['duration_ms'] / 1000:.1f} s", f"{len(answer['sources'])} sources read"]
+    if answer.get("cached"):
+        details.insert(1, "answer from the cache (asked before, no LLM call)")
     if answer["searches"]:
         details.append("follow-up searches: " + ", ".join(f'"{query}"' for query in answer["searches"]))
     if answer["invalid_citations"]:

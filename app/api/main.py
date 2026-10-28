@@ -9,7 +9,8 @@ from fastapi import Depends, FastAPI, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from qdrant_client.http.exceptions import ApiException
 
-from app.api.dependencies import get_agent, get_ingestion, get_pipeline, get_retriever, get_store
+from app.api.cache import AnswerCache
+from app.api.dependencies import get_agent, get_cache, get_ingestion, get_pipeline, get_retriever, get_store
 from app.api.schemas import AskRequest, AskResponse, DeleteResponse, DocumentInfo, HealthResponse
 from app.core.config import get_settings
 from app.core.log import setup_logging
@@ -79,15 +80,24 @@ def ask(
     body: AskRequest,
     agent: Annotated[InvestigationAgent, Depends(get_agent)],
     pipeline: Annotated[RAGPipeline, Depends(get_pipeline)],
+    cache: Annotated[AnswerCache, Depends(get_cache)],
 ) -> AskResponse:
     started = time.perf_counter()
+    if (cached := cache.get(body)) is not None:
+        logger.info("Answered %s/%s from the cache", body.method, body.search_mode)
+        duration_ms = round((time.perf_counter() - started) * 1000)
+        return cached.model_copy(update={"question": body.question, "duration_ms": duration_ms, "cached": True})
+
     if body.method == "agent":
         answer = agent.answer(body.question, mode=body.search_mode)
     else:
         answer = pipeline.answer(body.question, mode=body.search_mode)
     duration_ms = round((time.perf_counter() - started) * 1000)
     logger.info("Answered with %s/%s in %d ms", body.method, body.search_mode, duration_ms)
-    return AskResponse.from_answer(answer, duration_ms)
+    # Only answers are cached: an LLM error raises above and the next request tries again
+    response = AskResponse.from_answer(answer, duration_ms)
+    cache.put(body, response)
+    return response
 
 
 @app.get("/documents")
@@ -101,7 +111,9 @@ def list_documents(service: Annotated[IngestionService, Depends(get_ingestion)])
 # Uploading a file with the name of an indexed one replaces it (see IngestionService)
 @app.post("/documents", status_code=201)
 def upload_document(
-    file: UploadFile, service: Annotated[IngestionService, Depends(get_ingestion)]
+    file: UploadFile,
+    service: Annotated[IngestionService, Depends(get_ingestion)],
+    cache: Annotated[AnswerCache, Depends(get_cache)],
 ) -> IngestResult:
     name = _file_name(file.filename)
     # Reading one byte past the limit tells "exactly at the limit" from "too large"
@@ -113,14 +125,20 @@ def upload_document(
     with tempfile.TemporaryDirectory() as folder:
         path = Path(folder) / name
         path.write_bytes(content)
-        return service.ingest_file(path)
+        result = service.ingest_file(path)
+    # The documents changed, so a cached answer may be out of date
+    cache.clear()
+    return result
 
 
 @app.delete("/documents/{source}")
 def delete_document(
-    source: str, service: Annotated[IngestionService, Depends(get_ingestion)]
+    source: str,
+    service: Annotated[IngestionService, Depends(get_ingestion)],
+    cache: Annotated[AnswerCache, Depends(get_cache)],
 ) -> DeleteResponse:
     deleted = service.delete(source)
     if not deleted:
         raise HTTPException(status_code=404, detail=f"{source} is not in the collection")
+    cache.clear()
     return DeleteResponse(source=source, deleted_chunks=deleted)

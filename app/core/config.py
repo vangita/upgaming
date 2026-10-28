@@ -21,6 +21,8 @@ class Settings(BaseSettings):
 
     # Files the API cannot replace or delete besides the base dataset, as a JSON list
     protected_sources: list[str] = []
+    # How many recent answers the API keeps for repeated questions; 0 = no cache
+    answer_cache_size: int = 256
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
