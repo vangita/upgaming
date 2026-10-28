@@ -87,3 +87,40 @@ class HealthResponse(BaseModel):
     chunks: int
     llm_model: str
     embedding_model: str
+
+
+class LatencyStats(BaseModel):
+    # How many recent answers (not from the cache) the times are measured over
+    answers: int
+    mean_ms: int | None
+    p50_ms: int | None
+    p95_ms: int | None
+
+
+class LLMStats(BaseModel):
+    model: str
+    fallback_model: str | None
+    calls: int
+    # Calls answered by the fallback model because the main model's daily limit was used up
+    fallback_calls: int
+    prompt_tokens: int
+    completion_tokens: int
+
+
+class StatsResponse(BaseModel):
+    """What the server did since it started (GET /stats)."""
+
+    uptime_s: int
+    questions: int
+    questions_by_method: dict[str, int]
+    cache_hits: int
+    # Answers in the cache right now
+    cached_answers: int
+    abstentions: int
+    answers_with_conflicts: int
+    latency: LatencyStats
+    llm: LLMStats
+    # Failed questions by cause: "llm" or "vector_db"
+    errors: dict[str, int]
+    # Files "uploaded" and "deleted" through the API
+    documents: dict[str, int]

@@ -10,12 +10,21 @@ from fastapi.responses import JSONResponse
 from qdrant_client.http.exceptions import ApiException
 
 from app.api.cache import AnswerCache
-from app.api.dependencies import get_agent, get_cache, get_ingestion, get_pipeline, get_retriever, get_store
-from app.api.schemas import AskRequest, AskResponse, DeleteResponse, DocumentInfo, HealthResponse
+from app.api.dependencies import (
+    get_agent,
+    get_cache,
+    get_ingestion,
+    get_pipeline,
+    get_retriever,
+    get_stats,
+    get_store,
+)
+from app.api.schemas import AskRequest, AskResponse, DeleteResponse, DocumentInfo, HealthResponse, StatsResponse
+from app.api.stats import Stats
 from app.core.config import get_settings
 from app.core.log import setup_logging
 from app.ingestion.service import IngestionError, IngestionService, IngestResult
-from app.llm.client import LLMError
+from app.llm.client import LLMClient, LLMError, get_llm
 from app.rag.agent import InvestigationAgent
 from app.rag.pipeline import RAGPipeline
 from app.storage.qdrant_store import QdrantStore
@@ -81,23 +90,43 @@ def ask(
     agent: Annotated[InvestigationAgent, Depends(get_agent)],
     pipeline: Annotated[RAGPipeline, Depends(get_pipeline)],
     cache: Annotated[AnswerCache, Depends(get_cache)],
+    stats: Annotated[Stats, Depends(get_stats)],
 ) -> AskResponse:
     started = time.perf_counter()
     if (cached := cache.get(body)) is not None:
         logger.info("Answered %s/%s from the cache", body.method, body.search_mode)
         duration_ms = round((time.perf_counter() - started) * 1000)
-        return cached.model_copy(update={"question": body.question, "duration_ms": duration_ms, "cached": True})
+        response = cached.model_copy(update={"question": body.question, "duration_ms": duration_ms, "cached": True})
+        stats.record_answer(body.method, response)
+        return response
 
-    if body.method == "agent":
-        answer = agent.answer(body.question, mode=body.search_mode)
-    else:
-        answer = pipeline.answer(body.question, mode=body.search_mode)
+    try:
+        if body.method == "agent":
+            answer = agent.answer(body.question, mode=body.search_mode)
+        else:
+            answer = pipeline.answer(body.question, mode=body.search_mode)
+    except LLMError:
+        stats.record_error("llm")
+        raise
+    except ApiException:
+        stats.record_error("vector_db")
+        raise
     duration_ms = round((time.perf_counter() - started) * 1000)
     logger.info("Answered with %s/%s in %d ms", body.method, body.search_mode, duration_ms)
     # Only answers are cached: an LLM error raises above and the next request tries again
     response = AskResponse.from_answer(answer, duration_ms)
     cache.put(body, response)
+    stats.record_answer(body.method, response)
     return response
+
+
+@app.get("/stats")
+def server_stats(
+    stats: Annotated[Stats, Depends(get_stats)],
+    cache: Annotated[AnswerCache, Depends(get_cache)],
+    llm: Annotated[LLMClient, Depends(get_llm)],
+) -> StatsResponse:
+    return stats.snapshot(llm, cached_answers=len(cache))
 
 
 @app.get("/documents")
@@ -114,6 +143,7 @@ def upload_document(
     file: UploadFile,
     service: Annotated[IngestionService, Depends(get_ingestion)],
     cache: Annotated[AnswerCache, Depends(get_cache)],
+    stats: Annotated[Stats, Depends(get_stats)],
 ) -> IngestResult:
     name = _file_name(file.filename)
     # Reading one byte past the limit tells "exactly at the limit" from "too large"
@@ -128,6 +158,7 @@ def upload_document(
         result = service.ingest_file(path)
     # The documents changed, so a cached answer may be out of date
     cache.clear()
+    stats.record_document("uploaded")
     return result
 
 
@@ -136,9 +167,11 @@ def delete_document(
     source: str,
     service: Annotated[IngestionService, Depends(get_ingestion)],
     cache: Annotated[AnswerCache, Depends(get_cache)],
+    stats: Annotated[Stats, Depends(get_stats)],
 ) -> DeleteResponse:
     deleted = service.delete(source)
     if not deleted:
         raise HTTPException(status_code=404, detail=f"{source} is not in the collection")
     cache.clear()
+    stats.record_document("deleted")
     return DeleteResponse(source=source, deleted_chunks=deleted)

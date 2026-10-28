@@ -45,6 +45,9 @@ class APIClient:
     def health(self) -> dict:
         return self._request("GET", "/health")
 
+    def stats(self) -> dict:
+        return self._request("GET", "/stats")
+
     def ask(self, question: str, method: str = "agent", search_mode: str = "hybrid") -> dict:
         body = {"question": question, "method": method, "search_mode": search_mode}
         return self._request("POST", "/ask", json=body)

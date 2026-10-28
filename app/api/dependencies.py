@@ -1,6 +1,7 @@
 from functools import lru_cache
 
 from app.api.cache import AnswerCache
+from app.api.stats import Stats
 from app.core.config import get_settings
 from app.ingestion.service import PROTECTED_SOURCES, IngestionService
 from app.rag.agent import InvestigationAgent
@@ -30,6 +31,11 @@ def get_agent() -> InvestigationAgent:
 @lru_cache
 def get_pipeline() -> RAGPipeline:
     return RAGPipeline(get_retriever())
+
+
+@lru_cache
+def get_stats() -> Stats:
+    return Stats()
 
 
 @lru_cache

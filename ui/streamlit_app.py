@@ -91,6 +91,23 @@ def show_answer(answer: dict) -> None:
                 show_source(source)
 
 
+def show_stats(stats: dict) -> None:
+    with st.expander("Server activity"):
+        llm, latency = stats["llm"], stats["latency"]
+        lines = [
+            f"{stats['questions']} questions since the server started, {stats['cache_hits']} from the cache",
+            f"LLM: {llm['calls']} calls, {llm['prompt_tokens'] + llm['completion_tokens']:,} tokens",
+        ]
+        if llm["fallback_calls"]:
+            lines.append(f"{llm['fallback_calls']} calls answered by {llm['fallback_model']} (daily limit)")
+        if latency["answers"]:
+            lines.append(f"Answer time: median {latency['p50_ms'] / 1000:.1f} s, "
+                         f"95% within {latency['p95_ms'] / 1000:.1f} s")
+        if stats["errors"]:
+            lines.append("Errors: " + ", ".join(f"{kind} {count}" for kind, count in stats["errors"].items()))
+        st.caption("  \n".join(lines))
+
+
 client = get_client()
 
 with st.sidebar:
@@ -107,6 +124,7 @@ with st.sidebar:
             health = client.health()
         st.success(f"Backend online · {health['chunks']:,} chunks")
         st.caption(f"LLM: {health['llm_model']}  \nEmbeddings: {health['embedding_model']}")
+        show_stats(client.stats())
     except APIError as e:
         st.error(str(e))
 

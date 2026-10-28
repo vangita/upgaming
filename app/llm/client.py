@@ -50,6 +50,8 @@ class Usage:
     calls: int = 0
     prompt_tokens: int = 0
     completion_tokens: int = 0
+    # Calls answered by the fallback model (included in `calls`)
+    fallback_calls: int = 0
 
 
 class LLMClient:
@@ -88,7 +90,7 @@ class LLMClient:
         if tools:
             request |= {"tools": tools, "tool_choice": tool_choice}
         if self.fallback_model and time.monotonic() < self._fallback_until:
-            return self._create(self.fallback_model, request)
+            return self._create_with_fallback(request)
         try:
             return self._create(self.model, request)
         except DailyLimitError:
@@ -99,7 +101,12 @@ class LLMClient:
                 self.model, self.fallback_model, FALLBACK_PERIOD / 60,
             )
             self._fallback_until = time.monotonic() + FALLBACK_PERIOD
-            return self._create(self.fallback_model, request)
+            return self._create_with_fallback(request)
+
+    def _create_with_fallback(self, request: dict[str, Any]) -> ChatCompletionMessage:
+        message = self._create(self.fallback_model, request)
+        self.usage.fallback_calls += 1
+        return message
 
     def _create(self, model: str, request: dict[str, Any]) -> ChatCompletionMessage:
         try:
