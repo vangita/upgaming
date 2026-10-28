@@ -10,7 +10,9 @@ EXAMPLES = {
     "Task example": "Which system changes caused the payment processing disruption in March, "
                     "which services were affected, and which documents confirm this?",
     "Contradiction": "How long did the INC-2041 card payments outage last?",
-    "Multi-hop": "Black Book starred the actress and writer of what heritage?",
+    # Two documents and a calculation: 14:05 in the post-mortem, 14:12 in the support summary
+    "Multi-hop": "How many minutes after the TLS certificate expired did the first customer report "
+                 "about failed card payments arrive?",
     "Unanswerable": "What was the financial cost of INC-2041?",
 }
 FILE_TYPES = ["md", "txt", "pdf", "docx", "jsonl"]
