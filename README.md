@@ -110,7 +110,7 @@ evaluation.
 | Python backend, functional UI | FastAPI + Streamlit: ask, see sources and conflicts, add, update and delete documents |
 | ≥ 50k documents | 66,555 unique HotpotQA paragraphs + the sample documents |
 | Free public deployment, persistence, secrets | Render + Streamlit Community Cloud + Qdrant Cloud; keys only in the hosts' environment settings |
-| Bonus | Model comparison (gpt-oss-120b vs 20b), agentic RAG, caching (answers to repeated questions, embeddings), monitoring (`GET /stats`: questions, cache hits, answer time p50/p95, LLM tokens, fallback calls, errors, also shown in the UI), a performance test at full size (1,000 searches over 71,597 chunks, throughput with 1–16 threads); partly: prompt injection (a rule in the prompts, tested by hand; an automated test, `scripts/eval_injection.py`, not run yet) |
+| Bonus | Model comparison (gpt-oss-120b vs 20b), agentic RAG, caching (answers to repeated questions, embeddings), monitoring (`GET /stats`: questions, cache hits, answer time p50/p95, LLM tokens, fallback calls, errors, also shown in the UI), a performance test at full size (1,000 searches over 71,597 chunks, throughput with 1–16 threads), a prompt-injection test (`scripts/eval_injection.py`: 5 planted attacks, 3 resisted) |
 
 ## Dataset
 
@@ -200,14 +200,14 @@ Answers (47 questions, graded by an LLM judge of another model family):
 
 | Configuration | Answer correctness | Contradictions handled | Citation accuracy | Tokens / question |
 |---|---|---|---|---|
-| **agent, gpt-oss-120b** (deployed) | **0.95** | 5 of 6 | 0.97 | 2,284 |
+| **agent, gpt-oss-120b** (deployed) | **0.95** | 5 of 6 | 0.97 | 2,166 |
 | agent, gpt-oss-20b | 0.95 | 5 of 6 | 0.98 | 2,360 |
 | simple RAG, gpt-oss-20b | 0.86 | 0 of 6 | 0.99 | 1,639 |
 
 The agent's advantage comes from contradictions: the simple pipeline read both versions every time
-but always gave one. All configurations abstained on all 8 unanswerable questions. These numbers
-describe the version before the last two fixes (false premises, repeated searches); a re-run with
-them stopped at the daily token limit after 14 questions, all correct (see the report, section 4).
+but always gave one. All configurations abstained on all 8 unanswerable questions. The first row
+is the deployed code; the other two were measured before its last two fixes (false premises,
+repeated searches), which left the deployed agent's results unchanged (0.95 before and after).
 
 ## Performance and cost
 
@@ -337,6 +337,8 @@ fixed it. A quick check that the new code runs: a field added to a response show
 
 ## Limitations and future work
 
+- **Prompt injection**: instructions planted in a source are mostly ignored, but a fake "system
+  message" and a false fact given as an order got through in 2 of 5 attacks (Evaluation Report, 5.3).
 - **Open demo API**: there is no login or per-client rate limit. Visitors can use up the daily LLM
   tokens (the answer cache and the fallback model soften this) or upload files up to 10 MB each into
   the 1 GB database; the sample documents are protected from deletion.

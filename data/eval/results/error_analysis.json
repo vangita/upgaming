@@ -114,6 +114,120 @@
   ]
  },
  {
+  "run": "agent_gpt-oss-120b_v2",
+  "answers": 47,
+  "failure_types": {
+   "retrieval": 1,
+   "generation": 2
+  },
+  "failures": [
+   {
+    "id": "inc-c5",
+    "category": "contradictory",
+    "verdict": "incorrect",
+    "type": "retrieval",
+    "detail": "never read: inc-2041-status-page",
+    "searches": [],
+    "answer": "INC-2041 was resolved at 14:52 UTC.",
+    "note": null
+   },
+   {
+    "id": "hp-multihop4",
+    "category": "multi_hop",
+    "verdict": "partial",
+    "type": "generation",
+    "detail": "read every gold document, but the answer is wrong or incomplete",
+    "searches": [],
+    "answer": "Diego Luz is best known for his playmaking skills, range of passing and crossing ability, and his ability to bend free-kicks with both legs and head goals[1]. Lutz Pfannenstiel is best known as a globetrotter, being regarded among the most famous travelling footballers[6].",
+    "note": "Label noise: the HotpotQA question is garbled ('Luz Pfannenstiel' for Lutz Pfannenstiel) and its gold answer is a phrase ('the best known globetrotters')"
+   },
+   {
+    "id": "hp-multihop6",
+    "category": "multi_hop",
+    "verdict": "incorrect",
+    "type": "generation",
+    "detail": "abstained although it read every gold document",
+    "searches": [],
+    "answer": "I don't have enough information to answer this question.",
+    "note": null
+   }
+  ],
+  "citation_issues": [
+   {
+    "id": "hp-s2",
+    "category": "simple",
+    "not_cited": [],
+    "cited_other": [
+     "Anchor &amp; Braille"
+    ]
+   },
+   {
+    "id": "hp-multihop1",
+    "category": "multi_hop",
+    "not_cited": [
+     "Julian Allen"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop2",
+    "category": "multi_hop",
+    "not_cited": [
+     "Moby Dick—Rehearsed"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop3",
+    "category": "multi_hop",
+    "not_cited": [
+     "2004–05 FC Barcelona season"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop5",
+    "category": "multi_hop",
+    "not_cited": [
+     "Daphnis et Chloé"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop8",
+    "category": "multi_hop",
+    "not_cited": [
+     "Niall Horan"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop9",
+    "category": "multi_hop",
+    "not_cited": [
+     "Carlos Hasselbaink"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multihop11",
+    "category": "multi_hop",
+    "not_cited": [
+     "Dalmatian parliamentary election, 1861"
+    ],
+    "cited_other": []
+   },
+   {
+    "id": "hp-multidoc3",
+    "category": "multi_doc",
+    "not_cited": [
+     "Amy Tan"
+    ],
+    "cited_other": []
+   }
+  ]
+ },
+ {
   "run": "agent_gpt-oss-20b",
   "answers": 47,
   "failure_types": {
